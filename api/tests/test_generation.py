@@ -4,11 +4,21 @@ Test isolé de la generation RAG.
 import logging
 logging.basicConfig(level=logging.INFO)
 
+import os
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
+
 from clients import Neo4jClient, OllamaClient, QdrantWrapper
+
+NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
+NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
+NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD")
+QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 from retrieval import retrieve
 from generation import generate_answer
 
@@ -47,12 +57,12 @@ def test_full_rag(question, neo4j, qdrant, ollama):
 
 def main():
     with Neo4jClient(
-        uri="bolt://localhost:7687",
-        user="neo4j",
-        password="retex_dev_pwd",
-    ) as neo4j, OllamaClient(url="http://localhost:11434") as ollama:
+        uri=NEO4J_URI,
+        user=NEO4J_USER,
+        password=NEO4J_PASSWORD,
+    ) as neo4j, OllamaClient(url=OLLAMA_URL) as ollama:
 
-        qdrant = QdrantWrapper(url="http://localhost:6333")
+        qdrant = QdrantWrapper(url=QDRANT_URL)
 
         # Test 1 : question precise
         test_full_rag(

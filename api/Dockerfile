@@ -2,7 +2,7 @@
 # Build :  docker compose build api
 # Run   :  docker compose up api
 
-FROM python:3.12-slim
+FROM nexus.intraknow.net/repository/docker/yieloo-app/ia/python:3.13-slim
 
 # Variables d'environnement Python pour des conteneurs propres
 ENV PYTHONUNBUFFERED=1 \
