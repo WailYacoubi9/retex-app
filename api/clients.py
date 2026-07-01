@@ -60,7 +60,7 @@ class QdrantWrapper:
     """Wrapper Qdrant minimaliste."""
 
     def __init__(self, url: str):
-        self._client = _QdrantClient(url=url)
+        self._client = _QdrantClient(url=url, check_compatibility=False)
 
     def ensure_collection(self):
         """Cree la collection si elle n'existe pas. Idempotent."""
@@ -198,6 +198,19 @@ class OllamaClient:
         if json_format:
             payload["format"] = "json"
 
+        r = self._client.post(f"{self._url}/api/generate", json=payload)
+        r.raise_for_status()
+        return r.json().get("response", "").strip()
+
+    def generate_structured(self, prompt: str, schema: dict, model: Optional[str] = None) -> str:
+        """Génération avec structured output (JSON schema en format)."""
+        payload: dict[str, Any] = {
+            "model": model or self._llm_model,
+            "prompt": prompt,
+            "stream": False,
+            "format": schema,
+            "options": {"temperature": 0},
+        }
         r = self._client.post(f"{self._url}/api/generate", json=payload)
         r.raise_for_status()
         return r.json().get("response", "").strip()
