@@ -284,3 +284,58 @@ class AskResponseTickets(BaseModel):
     answer: str
     sources: list[SourceTicket] = Field(default_factory=list)
     metadata: AskResponseMetadata
+
+
+# =====================================================================
+# SCHÉMAS POUR /ask/incident-v2
+# =====================================================================
+
+class SourceIncidentV2(BaseModel):
+    numero_fe: Optional[str] = None
+    titre: Optional[str] = None
+    severite: Optional[str] = None
+    classification: Optional[str] = None
+    etat: Optional[str] = None
+    date_evenement: Optional[str] = None
+    resume_llm: Optional[str] = None
+    action_corrective: Optional[str] = None
+    score: float
+    matched_fields: list[str] = Field(default_factory=list)
+    entites: list[dict] = Field(default_factory=list)
+
+
+class AskIncidentV2Response(BaseModel):
+    answer: str
+    sources: list[SourceIncidentV2] = Field(default_factory=list)
+    metadata: AskResponseMetadata
+
+
+# =====================================================================
+# SCHÉMAS POUR /ask/incident-v2/stats
+# =====================================================================
+
+class AggregationResponse(BaseModel):
+    answer: str
+    metric: str = "count"
+    group_by: Optional[str] = None
+    filters_applied: dict = Field(default_factory=dict)
+    rows: list[dict] = Field(default_factory=list)
+    total: Optional[int] = None
+
+
+# =====================================================================
+# SCHÉMAS POUR /ask/incident-v2/entity
+# =====================================================================
+
+class EntityMatchResponse(BaseModel):
+    label: str
+    rel: str
+    entity_name: str
+    incident_count: int
+    sample_incidents: list[dict] = Field(default_factory=list)
+
+
+class EntityLookupResponse(BaseModel):
+    answer: str
+    matches: list[EntityMatchResponse] = Field(default_factory=list)
+    metadata: AskResponseMetadata

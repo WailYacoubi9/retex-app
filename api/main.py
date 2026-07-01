@@ -53,6 +53,11 @@ from schemas import (
     SourceInfoSecurite,
     AskResponseTickets,
     SourceTicket,
+    AskIncidentV2Response,
+    SourceIncidentV2,
+    AggregationResponse,
+    EntityLookupResponse,
+    EntityMatchResponse,
 )
 from retrieval_info_securite import retrieve_info_securite
 from generation_info_securite import generate_answer_is
@@ -60,6 +65,12 @@ from retrieval_tickets import retrieve_tickets
 from generation_tickets import generate_answer_tickets
 from retrieval import retrieve
 from generation import build_sources, generate_answer
+from retrieval_incident_v2 import retrieve_incident_v2
+from generation_incident_v2 import generate_answer_incident_v2
+from aggregation_incident_v2 import run_aggregation
+from generation_aggregation import phrase_result
+from entity_lookup_incident_v2 import fetch_entity
+from generation_entity_lookup import phrase_entity_result
 
 
 # =====================================================================
@@ -71,6 +82,7 @@ NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD")
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
+OLLAMA_TIMEOUT = float(os.environ.get("OLLAMA_TIMEOUT", "120"))
 
 logging.basicConfig(
     level=logging.INFO,
@@ -104,7 +116,7 @@ async def lifespan(app: FastAPI):
         password=NEO4J_PASSWORD,
     )
     app.state.qdrant = QdrantWrapper(url=QDRANT_URL)
-    app.state.ollama = OllamaClient(url=OLLAMA_URL)
+    app.state.ollama = OllamaClient(url=OLLAMA_URL, timeout=OLLAMA_TIMEOUT)
 
     logger.info("Connexions ouvertes, l'API est prete")
 
@@ -449,6 +461,149 @@ async def stats(request: Request) -> StatsResponse:
             status_code=500,
             detail=f"Erreur recuperation stats : {str(e)}",
         )
+
+
+# =====================================================================
+# ENDPOINT : POST /ask/incident-v2
+# =====================================================================
+
+@app.post("/ask/incident-v2", response_model=AskIncidentV2Response)
+async def ask_incident_v2(request: Request, body: AskRequest) -> AskIncidentV2Response:
+    start = time.time()
+    try:
+        retrieval = retrieve_incident_v2(
+            question=body.question,
+            ollama=request.app.state.ollama,
+            qdrant=request.app.state.qdrant,
+            neo4j=request.app.state.neo4j,
+            top_k=body.top_k,
+        )
+        generation = generate_answer_incident_v2(
+            question=body.question,
+            retrieval_result=retrieval,
+            ollama=request.app.state.ollama,
+        )
+        sources = [
+            SourceIncidentV2(
+                numero_fe=item.props.get("numero_fe"),
+                titre=item.props.get("titre"),
+                severite=item.props.get("severite"),
+                classification=item.props.get("classification"),
+                etat=item.props.get("etat"),
+                date_evenement=item.props.get("date_evenement"),
+                resume_llm=item.props.get("resume_llm"),
+                action_corrective=item.props.get("action_corrective"),
+                score=item.best_score,
+                matched_fields=item.matched_fields,
+                entites=item.entites,
+            )
+            for item in retrieval.items
+        ]
+        return AskIncidentV2Response(
+            answer=generation.answer,
+            sources=sources,
+            metadata=AskResponseMetadata(
+                duration_ms=int((time.time() - start) * 1000),
+                n_chunks_retrieved=retrieval.n_chunks_retrieved,
+                n_incidents_unique=retrieval.n_direct,
+                n_incidents_expanded=0,
+                model_used=generation.model_used,
+            ),
+        )
+    except Exception as e:
+        logger.exception("Erreur lors du traitement de /ask/incident-v2")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =====================================================================
+# ENDPOINT : POST /ask/incident-v2/stats
+# =====================================================================
+
+_NOT_AGGREGATION_ANSWER = (
+    "Cette question ne semble pas être une demande de comptage ou de répartition. "
+    "Posez une question du type : \"Combien d'incidents en 2025 ?\", "
+    "\"Répartition par sévérité\", \"Incidents sérieux en 2024\"."
+)
+
+
+@app.post("/ask/incident-v2/stats", response_model=AggregationResponse)
+async def ask_incident_v2_stats(request: Request, body: AskRequest) -> AggregationResponse:
+    try:
+        result = run_aggregation(
+            question=body.question,
+            ollama=request.app.state.ollama,
+            neo4j=request.app.state.neo4j,
+        )
+
+        if result["status"] == "not_aggregation":
+            return AggregationResponse(
+                answer=_NOT_AGGREGATION_ANSWER,
+                rows=[],
+            )
+
+        spec = result["spec"]
+        answer = phrase_result(
+            question=body.question,
+            spec=spec,
+            rows=result["rows"],
+            total=result["total"],
+            ollama=request.app.state.ollama,
+        )
+        return AggregationResponse(
+            answer=answer,
+            metric=spec.metric,
+            group_by=spec.group_by,
+            filters_applied=result["filters_applied"],
+            rows=result["rows"],
+            total=result["total"],
+        )
+    except Exception as e:
+        logger.exception("Erreur lors du traitement de /ask/incident-v2/stats")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =====================================================================
+# ENDPOINT : POST /ask/incident-v2/entity
+# =====================================================================
+
+@app.post("/ask/incident-v2/entity", response_model=EntityLookupResponse)
+async def ask_incident_v2_entity(request: AskRequest):
+    """Recherche d'incidents par nom d'entité satellite (compagnie, société, etc.)."""
+    start = time.time()
+    try:
+        matches = fetch_entity(
+            name=request.question,
+            neo4j=app.state.neo4j,
+        )
+        result = phrase_entity_result(
+            entity_query=request.question,
+            matches=matches,
+            ollama=app.state.ollama,
+        )
+        duration_ms = int((time.time() - start) * 1000)
+        return EntityLookupResponse(
+            answer=result.answer,
+            matches=[
+                EntityMatchResponse(
+                    label=m.label,
+                    rel=m.rel,
+                    entity_name=m.entity_name,
+                    incident_count=m.incident_count,
+                    sample_incidents=m.incidents[:10],
+                )
+                for m in result.matches
+            ],
+            metadata=AskResponseMetadata(
+                duration_ms=duration_ms,
+                n_chunks_retrieved=0,
+                n_incidents_unique=sum(m.incident_count for m in result.matches),
+                n_incidents_expanded=0,
+                model_used=result.model_used,
+            ),
+        )
+    except Exception as e:
+        logger.exception("Erreur lors du traitement de /ask/incident-v2/entity")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # =====================================================================
