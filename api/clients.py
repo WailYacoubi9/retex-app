@@ -55,6 +55,12 @@ class Neo4jClient:
         result = self.run("MATCH (i:Incident) RETURN count(i) AS c")
         return result[0]["c"] if result else 0
 
+    def run_read(self, cypher: str, **params) -> list[dict]:
+        """Execute une requête Cypher en session READ-ONLY."""
+        with self._driver.session(default_access_mode="READ") as s:
+            result = s.run(cypher, **params)
+            return [dict(r) for r in result]
+
 
 class QdrantWrapper:
     """Wrapper Qdrant minimaliste."""
@@ -187,22 +193,36 @@ class OllamaClient:
         model: Optional[str] = None,
         json_format: bool = False,
         temperature: float = 0.2,
+        num_ctx: Optional[int] = None,
+        timeout: Optional[float] = None,
     ) -> str:
         """Generation de texte via le LLM."""
+        options: dict[str, Any] = {"temperature": temperature}
+        if num_ctx:
+            options["num_ctx"] = num_ctx
         payload: dict[str, Any] = {
             "model": model or self._llm_model,
             "prompt": prompt,
             "stream": False,
-            "options": {"temperature": temperature},
+            "options": options,
         }
         if json_format:
             payload["format"] = "json"
 
-        r = self._client.post(f"{self._url}/api/generate", json=payload)
+        kwargs: dict[str, Any] = {}
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+        r = self._client.post(f"{self._url}/api/generate", json=payload, **kwargs)
         r.raise_for_status()
         return r.json().get("response", "").strip()
 
-    def generate_structured(self, prompt: str, schema: dict, model: Optional[str] = None) -> str:
+    def generate_structured(
+        self,
+        prompt: str,
+        schema: dict,
+        model: Optional[str] = None,
+        timeout: Optional[float] = None,
+    ) -> str:
         """Génération avec structured output (JSON schema en format)."""
         payload: dict[str, Any] = {
             "model": model or self._llm_model,
@@ -211,6 +231,9 @@ class OllamaClient:
             "format": schema,
             "options": {"temperature": 0},
         }
-        r = self._client.post(f"{self._url}/api/generate", json=payload)
+        kwargs: dict[str, Any] = {}
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+        r = self._client.post(f"{self._url}/api/generate", json=payload, **kwargs)
         r.raise_for_status()
         return r.json().get("response", "").strip()
