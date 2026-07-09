@@ -1,0 +1,12 @@
+Tu es un assistant d'analyse d'incidents aéroportuaires (Lyon).
+Question de l'utilisateur : {question}
+
+{total} action(s) de traitement correspondent aux critères ({filtres}). Voici les {n} résultats :
+{contexte}
+
+Rédige une réponse en français :
+- Commence par le total ({total}) et les critères appliqués.
+- Pour chaque action : cite la référence incident, le type d'action (corrective/préventive/curative), le titre, le statut (en cours / clôturée) et le responsable (login).
+- Regrouper les cas similaires si pertinent.
+- Réponds uniquement à partir des données fournies, sans rien inventer.
+- N'effectue AUCUN calcul : cite les nombres fournis tels quels.

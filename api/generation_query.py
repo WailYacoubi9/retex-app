@@ -118,12 +118,14 @@ def phrase_unified_result(question: str, result: dict, ollama: OllamaClient) -> 
     if spec.output == "count":
         total = int(resultat_brut) if resultat_brut is not None else 0
         if total == 0:
+            msg_zero = "Aucune action" if spec.include_actions else "Aucun incident"
             return QueryGenResult(
-                answer=f"Aucun incident ne correspond aux critères ({filtres}).",
+                answer=f"{msg_zero} ne correspond aux critères ({filtres}).",
                 model_used="deterministe",
             )
+        unite = "action(s)" if spec.include_actions else "incident(s)"
         return QueryGenResult(
-            answer=f"{total} incident(s) correspondent aux critères : {filtres}.",
+            answer=f"{total} {unite} correspondent aux critères : {filtres}.",
             model_used="deterministe",
         )
 
@@ -148,14 +150,14 @@ def phrase_unified_result(question: str, result: dict, ollama: OllamaClient) -> 
     elif spec.include_actions and spec.shape == "par_incident":
         contexte = _contexte_actions_par_incident(rows)
         prompt = prompt_store.rendre(
-            "question_libre.reponse_liste",
+            "question_libre.reponse_actions",
             question=question, total=len(rows), filtres=filtres,
             n=len(rows), contexte=contexte,
         )
     elif spec.include_actions and spec.shape == "par_action":
         contexte = _contexte_actions_par_action(rows)
         prompt = prompt_store.rendre(
-            "question_libre.reponse_liste",
+            "question_libre.reponse_actions",
             question=question, total=len(rows), filtres=filtres,
             n=len(rows), contexte=contexte,
         )

@@ -827,6 +827,11 @@ _SHAPE_PAR_INCIDENT_RE = re.compile(
     re.IGNORECASE,
 )
 
+_COMBIEN_RE = re.compile(
+    r"\bcombien\b|\bquel\s+nombre\b|\btotal\b|\bnombre\s+de\b|\bcompte\b|\bcount\b",
+    re.IGNORECASE,
+)
+
 _SEVERITY_PATTERNS: list[tuple[str, str]] = [
     (r"\bintolérable[s]?\b|intolerable[s]?\b|5\s*-\s*intol", "5 - intolérable"),
     (r"\bélevée?[s]?\b|elevee?[s]?\b|grave[s]?\b|sévère[s]?\b|severe[s]?\b|high\b", "4 - élevé"),
@@ -848,6 +853,15 @@ _BLESSES_RE = re.compile(r"\bblesse[és][s]?\b|blessure[s]?\b|victime[s]?\b", re
 _SANS_BLESSES_RE = re.compile(r"sans\s+bless", re.IGNORECASE)
 _RECENT_RE = re.compile(r"(plus\s+)?récent[se]?\b|recent[se]?\b", re.IGNORECASE)
 _ANNEE_RE = re.compile(r"\b(20\d{2})\b")
+_LIMIT_CHIFFRE_RE = re.compile(r"\b(\d+)\b")
+_MOTS_NOMBRE: dict[str, int] = {
+    "un": 1, "une": 1, "deux": 2, "trois": 3, "quatre": 4, "cinq": 5,
+    "six": 6, "sept": 7, "huit": 8, "neuf": 9, "dix": 10,
+    "quinze": 15, "vingt": 20, "trente": 30, "cinquante": 50, "cent": 100,
+}
+_MOTS_NOMBRE_RE = re.compile(
+    r"\b(" + "|".join(_MOTS_NOMBRE) + r")\b", re.IGNORECASE
+)
 
 
 def _postprocess_unified(spec: UnifiedQuerySpec, question: str) -> UnifiedQuerySpec:
@@ -904,6 +918,13 @@ def _postprocess_unified(spec: UnifiedQuerySpec, question: str) -> UnifiedQueryS
     if not spec.include_actions and _ACTION_STRUCT_RE.search(q):
         spec.include_actions = True
 
+    # Fix P1 : invalider include_actions=True du LLM si aucun pattern ne le confirme
+    # ("action immédiate", "mesure", etc. ne doivent pas déclencher la jointure :Action)
+    if spec.include_actions and not _ACTION_STRUCT_RE.search(q) and not _SHAPE_PAR_INCIDENT_RE.search(q):
+        spec.include_actions = False
+        spec.action_type = None
+        spec.action_statut = None
+
     if spec.include_actions:
         # Quand include_actions : "clôturé/terminé" = statut de l'action, pas de l'incident
         spec.f_traitement_termine = None
@@ -914,11 +935,36 @@ def _postprocess_unified(spec: UnifiedQuerySpec, question: str) -> UnifiedQueryS
                     spec.action_type = val  # type: ignore[assignment]
                     break
 
+        # Fix C2 : vérifier que l'action_statut mis par le LLM est confirmé par la question
+        # "les plus anciennes" ne doit PAS être interprété comme "cloturee"
+        if spec.action_statut is not None:
+            if spec.action_statut == "cloturee" and not _ACTION_CLOTUREE_RE.search(q):
+                spec.action_statut = None  # type: ignore[assignment]
+            elif spec.action_statut == "en_cours" and not _ACTION_EN_COURS_RE.search(q):
+                spec.action_statut = None  # type: ignore[assignment]
+
         if spec.action_statut is None:
             if _ACTION_EN_COURS_RE.search(q):
                 spec.action_statut = "en_cours"  # type: ignore[assignment]
             elif _ACTION_CLOTUREE_RE.search(q):
                 spec.action_statut = "cloturee"  # type: ignore[assignment]
+
+        # Fix C5 : forcer output=liste si la question ne contient pas de marqueur de comptage
+        if spec.output == "count" and not _COMBIEN_RE.search(q):
+            spec.output = "liste"  # type: ignore[assignment]
+
+        # Fix C2 : re-détecter la limite depuis la question (le LLM rate souvent les nombres
+        # quand d'autres marqueurs dominent, ex. "les 10 actions préventives les plus anciennes")
+        m_chiffre = _LIMIT_CHIFFRE_RE.search(q)
+        if m_chiffre:
+            candidate = int(m_chiffre.group(1))
+            # Exclure les années 4 chiffres
+            if not (1900 <= candidate <= 2100):
+                spec.limit = max(1, min(candidate, 200))
+        else:
+            m_mot = _MOTS_NOMBRE_RE.search(q)
+            if m_mot:
+                spec.limit = max(1, min(_MOTS_NOMBRE[m_mot.group(1).lower()], 200))
 
         # shape : par_incident si la question part clairement des incidents
         if _SHAPE_PAR_INCIDENT_RE.search(q):
@@ -1046,7 +1092,7 @@ def build_unified_cypher(spec: UnifiedQuerySpec, fields: list[str]) -> tuple[str
 
     if spec.output == "count":
         if spec.include_actions:
-            # Compter les actions (pas les incidents)
+            # Compter les nœuds :Action distincts
             aw: list[str] = list(where)
             if spec.action_type is not None:
                 aw.append("r.type_action = $atype")
@@ -1057,7 +1103,7 @@ def build_unified_cypher(spec: UnifiedQuerySpec, fields: list[str]) -> tuple[str
                 aw.append("a.statut = '0'")
             cypher = (
                 f"MATCH (i:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) "
-                f"WHERE {' AND '.join(aw)} RETURN count(*) AS n"
+                f"WHERE {' AND '.join(aw)} RETURN count(DISTINCT a) AS n"
             )
         else:
             cypher = f"{base} RETURN count(i) AS n"
