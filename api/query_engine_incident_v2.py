@@ -807,7 +807,8 @@ _ACTION_STRUCT_RE = re.compile(
     r"|\bleurs\s+actions?\b"
     r"|\bactions?\s+en\s+cours\b"
     r"|\bactions?\s+cl[oô]tur[ée]e[s]?\b"
-    r"|\bactions?\s+termin[ée]e[s]?\b",
+    r"|\bactions?\s+termin[ée]e[s]?\b"
+    r"|\bactions?\s+des?\s+(accidents?|incidents?|fiches?)\b",
     re.IGNORECASE,
 )
 _ACTION_TYPE_PATS: list[tuple[re.Pattern, str]] = [
@@ -817,7 +818,8 @@ _ACTION_TYPE_PATS: list[tuple[re.Pattern, str]] = [
 ]
 _ACTION_EN_COURS_RE = re.compile(r"\ben\s+cours\b|non\s+cl[oô]tur[ée]e[s]?\b", re.IGNORECASE)
 _ACTION_CLOTUREE_RE = re.compile(
-    r"\bcl[oô]tur[ée]e[s]?\b|termin[ée]e[s]?\b|ferm[ée]e[s]?\b|r[ée]solue[s]?\b",
+    r"\bcl[oô]tur[ée]e[s]?\b|termin[ée]e[s]?\b|ferm[ée]e[s]?\b|r[ée]solue[s]?\b"
+    r"|sold[ée]e[s]?\b",
     re.IGNORECASE,
 )
 _SHAPE_PAR_INCIDENT_RE = re.compile(
@@ -847,7 +849,19 @@ _SEVERITY_PATTERNS: list[tuple[str, str]] = [
 
 _ORDER_ASC_RE = re.compile(
     r"\banci(en|enne|ens|ennes)\b|plus\s+vieu[x]?\b|oldest\b|au\s+début\b"
-    r"|\bpremier[es]?[s]?\b|les\s+premi[eè]re?[s]?\b",
+    r"|\bpremi[eè]re?s?\b",
+    re.IGNORECASE,
+)
+_CETTE_ANNEE_RE = re.compile(r"\bcette\s+ann[ée]e\b", re.IGNORECASE)
+_L_ACTION_SING_RE = re.compile(r"\bl['']action\b", re.IGNORECASE)
+_TRAITEMENT_CLOS_RE = re.compile(
+    r"\bincidents?\s+cl[oô]tur[ée]e?[s]?\b"
+    r"|\bfiches?\s+cl[oô]tur[ée]e?[s]?\b"
+    r"|\btraitement\s+termin[ée]\b",
+    re.IGNORECASE,
+)
+_TRAITEMENT_COURS_RE = re.compile(
+    r"\btraitement\s+en\s+cours\b|\bnon\s+traité[s]?\b",
     re.IGNORECASE,
 )
 _SERIEUX_RE = re.compile(r"\bsérieus[e]?\b|serieux\b|serious\b", re.IGNORECASE)
@@ -920,6 +934,24 @@ def _postprocess_unified(spec: UnifiedQuerySpec, question: str) -> UnifiedQueryS
         if m:
             spec.f_annee = int(m.group(1))
 
+    # B3 : invalider f_annee hallucination — le LLM ne doit pas inférer l'année courante
+    # si aucune année 4 chiffres ni "cette année" n'apparaît dans la question
+    if spec.f_annee is not None and not _ANNEE_RE.search(q) and not _CETTE_ANNEE_RE.search(q):
+        spec.f_annee = None
+
+    # NR5 : "cette année" → année courante (le LLM rate parfois ce mapping)
+    if spec.f_annee is None and _CETTE_ANNEE_RE.search(q):
+        from datetime import date as _date
+        spec.f_annee = _date.today().year
+
+    # NR4 : f_traitement_termine déterministe — le LLM rate souvent "clôturé" pour les incidents
+    # Placé AVANT le bloc include_actions : ce bloc clear f_traitement_termine si include_actions=True
+    if spec.f_traitement_termine is None:
+        if _TRAITEMENT_CLOS_RE.search(q):
+            spec.f_traitement_termine = True
+        elif _TRAITEMENT_COURS_RE.search(q):
+            spec.f_traitement_termine = False
+
     # ─── Actions structurées (nœuds :Action) ─────────────────────────────────
     if not spec.include_actions and _ACTION_STRUCT_RE.search(q):
         spec.include_actions = True
@@ -934,6 +966,14 @@ def _postprocess_unified(spec: UnifiedQuerySpec, question: str) -> UnifiedQueryS
     if spec.include_actions:
         # Quand include_actions : "clôturé/terminé" = statut de l'action, pas de l'incident
         spec.f_traitement_termine = None
+
+        # B1 : valider l'action_type mis par le LLM — miroir du Fix C2 pour action_statut
+        if spec.action_type is not None:
+            confirmed = any(
+                pat.search(q) for pat, val in _ACTION_TYPE_PATS if val == spec.action_type
+            )
+            if not confirmed:
+                spec.action_type = None  # type: ignore[assignment]
 
         if spec.action_type is None:
             for pat, val in _ACTION_TYPE_PATS:
@@ -975,6 +1015,9 @@ def _postprocess_unified(spec: UnifiedQuerySpec, question: str) -> UnifiedQueryS
             m_mot = _MOTS_NOMBRE_RE.search(q)
             if m_mot:
                 spec.limit = max(1, min(_MOTS_NOMBRE[m_mot.group(1).lower()], 200))
+            # B5 : "l'action X" (singulier) → limit=1 implicite (superlatif sans nombre)
+            elif _L_ACTION_SING_RE.search(q):
+                spec.limit = 1
 
         # shape : par_incident si la question part clairement des incidents
         if _SHAPE_PAR_INCIDENT_RE.search(q):
