@@ -1,160 +1,123 @@
 # État vérifié des voies de l'assistant Incident v2
 
-> Audit réalisé le **2026-07-08**.
-> Serveur : `172.16.6.10`, API port 8000.
-> **GPU DOWN** (nvidia-smi : Unknown Error / No devices found).
-> Modèles Ollama chargés sur **CPU** : `qwen2.5:7b` (vram=0), `bge-m3` (vram=0).
-> Embed bge-m3 : **1,6 s** sur CPU. Generate qwen2.5:7b : **> 60 s** (bloquant).
+> Audit réalisé le **2026-07-09**.
+> Serveur : `172.16.6.10`, API port 8000 · Frontend Streamlit port 8501.
+> **GPU OPÉRATIONNEL** : NVIDIA L4, 926 MiB / 23 034 MiB — Ollama actif sur GPU.
+> Modèles : `bge-m3` (embed, vram 664 MB), `qwen2.5:7b` (generate, chargé à la demande).
 
 ---
 
 ## Tableau récapitulatif
 
-| Endpoint | Existe | Dépend d'Ollama | Test 1 | Test 2 | Exactitude vs Cypher | Garde-fous | Statut global |
+| Endpoint | Existe | Dépend d'Ollama | Test 1 | Test 2 | Exactitude vs Cypher | Garde-fou | Statut global |
 |---|---|---|---|---|---|---|---|
-| `GET /health` | ✓ | ✗ | `healthy` — neo4j/qdrant/ollama up | — | N/A | N/A | **VÉRIFIÉ OK** |
-| `GET /stats` | ✓ | ✗ | `incidents: 0` — bug label | — | N/A | N/A | **BUG** (label :Incident vs :IncidentSecu) |
-| `POST /ask/incident-v2` | ✓ | Phrasing LLM (1200 s, pas de fallback) | timeout 20 s | — | — | — | **OK SAUF PHRASAGE** (GPU down) |
-| `POST /ask/incident-v2/stats` | ✓ | Parsing LLM (generate_structured) + phrasing | timeout 20 s | — | — | — | **OK SAUF LLM** (GPU down) |
-| `POST /ask/incident-v2/list` | ✓ | Phrasing LLM 90 s (fallback texte ✓) | 5 derniers DESC ✓ 5 records | 3 sévérité élevée ✓ filter OK | ✅ exact vs Cypher (3/3) | Count → redirect ✓ ; hors-sujet → liste par défaut ✗ | **VÉRIFIÉ OK** (avec limites regex) |
-| `POST /ask/incident-v2/entity` | ✓ | Phrasing LLM (1200 s, pas de fallback) | timeout 20 s | — | — | — | **OK SAUF PHRASAGE** (GPU down) |
-| `POST /ask/incident-v2/actions` | ✓ | Parsing LLM (generate_structured) + phrasing | timeout 20 s | — | — | — | **OK SAUF LLM** (GPU down) |
-| `POST /ask/incident-v2/recommande` | ✓ | Phrasing LLM (1200 s, pas de fallback) | timeout 20 s | — | — | — | **OK SAUF PHRASAGE** (GPU down) |
-| `POST /ask/incident-v2/query` | ✓ | Parsing LLM (generate_structured) — sauf count déterministe | timeout 60 s | — | — | — | **OK SAUF LLM** (GPU down) |
-| `POST /ask` | ✓ | Phrasing LLM (1200 s, pas de fallback) | timeout 15 s | — | — | — | **OK SAUF PHRASAGE** (GPU down) |
-| `POST /ask/tickets` | ✓ | Phrasing LLM (1200 s, pas de fallback) | timeout 15 s | — | — | — | **OK SAUF PHRASAGE** (GPU down) |
-| `POST /ask/info-securite` | ✓ | Phrasing LLM (1200 s, pas de fallback) | timeout 15 s | — | — | — | **OK SAUF PHRASAGE** (GPU down) |
+| `GET /health` | ✓ | Non | healthy, 3 services up | — | N/A | N/A | **VÉRIFIÉ OK** |
+| `GET /stats` | ✓ | Non | incidents=0 (bug label) | — | ✗ bug | N/A | **BUG** (label :Incident) |
+| `POST /ask/incident-v2` | ✓ | Phrasing seul (embed=bge-m3 + generate) | 18 s — 5 sources aviaire, réponse cohérente Lyon | 10 s — FNE/26/0240 trappe carburant score 0.798 | N/A (sémantique) | ✓ "pas trouvé" si hors corpus | **VÉRIFIÉ OK** |
+| `POST /ask/incident-v2/stats` | ✓ | Parsing (generate_structured) + phrasing | 5 s — 1 021 incidents 2025 ✅ | 4 s — répartition sévérité 9 176 total ✅ | ✅ exact vs Cypher | ⚠️ reformule silencieusement une question-liste en count | **VÉRIFIÉ OK** |
+| `POST /ask/incident-v2/list` | ✓ | **Parsing : REGEX** (0 ms) · Phrasing : 90 s timeout + fallback | 13 s — 5 records date_creation DESC ✅ | voir détail regex ci-dessous | ✅ exact vs Cypher (3/3) | ✓ count → redirect · ✗ hors-sujet → liste défaut | **VÉRIFIÉ OK** (limites regex) |
+| `POST /ask/incident-v2/entity` | ✓ | Phrasing seul (recherche Neo4j sans LLM) | 7 s — EASYJET 587 incidents ✅ | 8 s — "Air France" → résultats incohérents ✗ | EASYJET ✅ / Air France ✗ | — | **BUG PARTIEL** (matching multi-tokens) |
+| `POST /ask/incident-v2/actions` | ✓ | Parsing (generate_structured) + phrasing | 29 s — 114 actions correctives FOD ✅ | 4 s — 532 préventives ✅ | ✅ exact vs Cypher | — | **VÉRIFIÉ OK** |
+| `POST /ask/incident-v2/recommande` | ✓ | Embed (bge-m3) + phrasing (generate) | 23 s — 20 incidents similaires, 13 actions, réponse structurée | — | N/A | ✓ "aucune action" si vide | **VÉRIFIÉ OK** |
+| `POST /ask/incident-v2/query` | ✓ | Parsing (generate_structured) + phrasing (count = déterministe) | 4 s — 21 blessés ✅ | 5 s — 250 incidents nuit 2025 ✅ avec répartition mensuelle | ✅ exact vs Cypher | ✓ "pas réussi à interpréter" si hors-champ | **VÉRIFIÉ OK** |
+| `POST /ask` | ✓ | Embed + phrasing | 2 s — 0 sources, "pas trouvé" (corpus vide) | — | N/A | ✓ | **VÉRIFIÉ OK** (corpus legacy vide) |
+| `POST /ask/tickets` | ✓ | Embed + phrasing | 1 s — 0 sources, "Aucun ticket trouvé" | — | N/A | ✓ | **VÉRIFIÉ OK** (corpus vide) |
+| `POST /ask/info-securite` | ✓ | Embed + phrasing | 1 s — 0 sources, "pas trouvé" | — | N/A | ✓ | **VÉRIFIÉ OK** (corpus vide) |
 
 ---
 
-## Détail par voie
-
-### /health (GET)
-- **Statut** : healthy. Neo4j up, Qdrant up, Ollama up.
-- Pas de dépendance LLM.
-
-### GET /stats ← BUG CONNU
-- Retourne `incidents: 0` car il compte le label `:Incident` (ancien) et non `:IncidentSecu`.
-- Neo4j réel : **9 191** nœuds `:IncidentSecu` (vérifié Cypher).
-- Qdrant : 27 195 chunks, dim 1024. ✓
-
-### POST /ask/incident-v2 — Sémantique
-- **Parsing** : aucun (embed direct bge-m3, 1,6 s CPU).
-- **Phrasing** : `generate` qwen2.5:7b, timeout 1200 s, **pas de fallback**.
-- **GPU down** : l'embed se fait en 1,6 s, puis la requête pend indéfiniment côté phrasing LLM.
-- Résumés LLM enrichis sur le graphe : **5 158** fiches avec `resume_llm`, 4 033 `resume_skip`.
-
-### POST /ask/incident-v2/stats — Agrégation
-- **Parsing** : `generate_structured` (qwen2.5:7b) → AggregationSpec.
-- **GPU down** : bloqué dès le parsing (> 60 s sur CPU, OLLAMA_TIMEOUT = 1200 s).
-- Architecture correcte, Cypher déterministe, pas de fabrication de chiffres.
-
-### POST /ask/incident-v2/list — Liste structurée ⭐
-**Seule voie pleinement fonctionnelle sur CPU.**
-
-- **Parsing** : **regex déterministe** (aucun appel LLM) — instantané.
-- **Phrasing** : `generate` qwen2.5:7b avec **timeout 90 s + fallback texte structuré** → renvoie toujours une réponse.
-
-#### Exactitude vs Cypher (contrôle en lecture seule) :
-| Question | API /list | Cypher direct | Conforme |
-|---|---|---|---|
-| 5 derniers par date_creation DESC | FNE/26/0243, 0244, 0241, 0242, 0240 | Identique | ✅ |
-| 3 plus récents sévérité "4 - élevé" par date_evenement | FNE SURT/22/0288 (NULL), FNE/26/0241, FNE/26/0096 | Identique | ✅ |
-| Incidents sérieux les plus anciens (ASC) | FNE-2008ADL060, 058, 382, 540, 544 | Identique | ✅ |
-
-> Note : FNE SURT/22/0288 apparaît en tête du tri DESC par date_evenement car `date_evenement = NULL` — comportement Cypher attendu (NULL > valeur en DESC). C'est un défaut de donnée, pas un bug code.
-
-#### Limites du parseur regex :
-| Tournure | Comportement actuel | Attendu | Verdict |
-|---|---|---|---|
-| `"les 5 derniers incidents graves"` | sort_by=date_creation, order=desc, limit=5, **f_severite manquant** | f_severite="4 - élevé" | ⚠️ "graves" (pluriel) non reconnu — fix : `graves?` |
-| `"donne-moi les cinq incidents les plus récents"` | limit=5 (défaut) | limit=5 | ✓ par chance (défaut = 5) |
-| `"affiche les trois dernières fiches graves"` | limit=5, f_severite=None | limit=3, f_severite="4 - élevé" | ✗ nombres en lettres non reconnus |
-| `"les incidents de nuit en 2024"` | f_condition_lumineuse="Nuit", f_annee=2024 | idem | ✓ |
-| `"les incidents sérieux les plus anciens"` | f_classification="Incident sérieux", order=asc | idem | ✓ |
-| `"quel est le nom du directeur de l'aéroport"` | retourne 5 incidents par défaut | message d'erreur ou refus | ✗ **pas de garde-fou sémantique** |
-
-**Couverture linguistique réelle** : les tournures avec des **chiffres arabes** et les **adjectifs au singulier** passent bien. Les **nombres en lettres** (trois, cinq, dix…) et les **adjectifs au pluriel** (graves, récents) ne sont pas reconnus par le regex.
-
-#### Garde-fous /list :
-- ✅ Question de comptage ("combien…") → message de redirect vers /stats, 0 records.
-- ✗ Question hors-sujet (ex. "nom du directeur") → retourne une liste par défaut sans avertissement.
-
-### POST /ask/incident-v2/entity — Entité
-- **Parsing** : recherche fuzzy/keyword directe en Neo4j (pas de LLM).
-- **Phrasing** : `generate` qwen2.5:7b, 1200 s, **pas de fallback**.
-- **GPU down** : recherche Neo4j fonctionne, phrasing bloqué.
-- Bug documenté : CONTAINS/OU sur plusieurs entités parfois incorrect.
-
-### POST /ask/incident-v2/actions — Actions
-- **Parsing** : `generate_structured` (ActionSpec, qwen2.5:7b) — bloqué CPU.
-- **Données** : 1 298 relations A_POUR_ACTION : 763 correctives, **532 "préventive" (avec accent é)**, 3 curatives.
-- ⚠️ Piège : toute requête filtrant par `type_action = "preventive"` (sans accent) retourne 0 résultats. La valeur en base est `"préventive"` avec accent.
-
-### POST /ask/incident-v2/recommande — Recommandation
-- **Parsing** : embed bge-m3 (1,6 s CPU ✓).
-- **Phrasing** : `generate` qwen2.5:7b, 1200 s, **pas de fallback**.
-- **GPU down** : retrieval Qdrant + Neo4j fonctionnel, phrasing bloqué.
-
-### POST /ask/incident-v2/query — Moteur générique
-- **Parsing** : `generate_structured` (QuerySpec) — bloqué CPU.
-- **Phrasing count** : déterministe, pas de LLM (ex : "X incident(s) correspondent aux critères : …").
-- **GPU down** : même les count bloquent car le parsing de la spec passe d'abord par LLM.
-- Opérateurs supportés : `=`, `!=`, `contient`, `>=`, `<=`, `annee`, `mois`, `est_rempli`, `est_vide`.
-
-### POST /ask, /ask/tickets, /ask/info-securite — Anciennes voies
-- Toutes accèdent à Qdrant (embed bge-m3) + Neo4j puis `generate` LLM.
-- **GPU down** : embed OK (1,6 s), puis phrasing bloqué (1200 s, pas de fallback).
-- Pas de régression structurelle détectée : les routes sont enregistrées, les dépendances correctes.
-
----
-
-## Données graphe (contrôle Cypher)
+## Données de référence Cypher (vérification en lecture seule)
 
 ```
-IncidentSecu       : 9 191  (0 via GET /stats → bug label)
-  avec resume_llm  : 5 158
-  avec resume_skip : 4 033
-  avec action_corrective (champ) : 3 389
-  avec date_evenement            : 9 189
-  avec classification            : 9 176
-Actions (:Action)  : 1 135 nœuds
-Relations A_POUR_ACTION : 1 298
-  corrective       : 763
-  préventive       : 532  (accent sur é — piège de filtre)
-  curative         :   3
-Qdrant chunks      : 27 195, dim 1024
+IncidentSecu total        : 9 191   (GET /stats retourne 0 — bug label :Incident)
+  dont année 2025         : 1 021   → /stats Q1 = 1 021 ✅
+  dont année 2024         : 1 065
+  dont sévérité élevée    :   164   → /stats Q2 = 164 ✅ (dans répartition)
+  dont présence blessés   :    21   → /query Q1 = 21 ✅
+  dont nuit 2025          :   250   → /query Q2 = 250 ✅
+Actions (:Action)         : 1 135 nœuds
+Relations A_POUR_ACTION   : 1 298
+  corrective              :   763
+  préventive (avec accent): 532     → /actions Q2 = 532 ✅
+  curative                :     3
+FOD correctives via titre :   114   → /actions Q1 = 114 ✅
+EASYJET via IMPLIQUE_COMPAGNIE : 587 → /entity Q1 = 587 ✅
+5 derniers date_creation  : FNE/26/0243, 0244, 0241, 0242, 0240 → /list Q1 = idem ✅
+Incidents sérieux ASC     : FNE-2008ADL060, 058, 382, 540, 544 → /list ✅
 ```
 
 ---
 
-## Voies démontrables aujourd'hui (GPU down)
+## Détail /list — Couverture linguistique du parseur REGEX
 
-| Voie | Ce qu'on peut montrer |
-|---|---|
-| `/ask/incident-v2/list` | Listes triées/filtrées, fallback texte, redirect count. Instantané. |
-| `/health` | Santé des services. |
-| Données graphe | Cypher read-only sur neo4j (shell direct). |
+Le parsing est **100 % regex déterministe** (aucun appel LLM pour cette étape).
+Instantané. Conséquences : robuste sur CPU/GPU, mais couverture lexicale limitée.
 
-## Voies à NE PAS montrer au client tant que GPU down
+| Tournure testée | limit | sort_by | order | f_severite | f_classification | Verdict |
+|---|---|---|---|---|---|---|
+| `"Les 5 derniers incidents par date de création"` | 5 | date_creation | desc | — | — | ✅ |
+| `"les 3 incidents les plus récents de sévérité élevée"` | 3 | date_evenement | desc | 4 - élevé | — | ✅ |
+| `"les incidents sérieux les plus anciens"` | 5 | date_creation | asc | — | Incident sérieux | ✅ |
+| `"donne-moi les cinq incidents les plus récents"` | **5** (défaut) | date_creation | desc | — | — | ⚠️ "cinq" non reconnu — marche par coïncidence (défaut=5) |
+| `"affiche les trois dernières fiches graves"` | **5** (défaut) | date_creation | desc | — | — | ✗ "trois" non reconnu → limit=5 ; "graves" non reconnu → pas de filtre sévérité |
+| `"les 10 derniers incidents de nuit en 2024 avec résumé"` | 10 | date_creation | desc | — | — | ✅ f_condition_lumineuse=Nuit, f_annee=2024 |
 
-| Voie | Raison |
-|---|---|
-| `/ask/incident-v2` | Réponse en attente indéfiniment (1200 s timeout, pas de fallback) |
-| `/ask/incident-v2/stats` | Parsing bloqué dès la 1re étape |
-| `/ask/incident-v2/entity` | Phrasing bloqué |
-| `/ask/incident-v2/actions` | Parsing bloqué |
-| `/ask/incident-v2/recommande` | Phrasing bloqué |
-| `/ask/incident-v2/query` | Parsing bloqué (même les count) |
-| `/ask`, `/ask/tickets`, `/ask/info-securite` | Phrasing bloqué |
+**Règle du parseur :** nombres en lettres non reconnus (trois, cinq, dix…), adjectifs au pluriel non reconnus (graves, récents, anciens — vs grave, récent, ancien).
+**Couverture réelle :** tournures avec chiffres arabes et mots-clés au singulier = 100 %. Tournures familières avec mots en lettres = partielle.
 
-## Voies à corriger avant point client (indépendamment du GPU)
+---
 
-| Problème | Voie | Fix |
+## Détail /entity — Bug de matching multi-tokens
+
+- `"EASYJET"` → 587 incidents via `IMPLIQUE_COMPAGNIE` ✅
+- `"Air France"` → retourne TypeEvenement "Collision aviaire" (1 683) et Notifiant "Agent aire de trafic" — **pas Air France** ✗
+
+Cause probable : le fuzzy-matching sur plusieurs tokens ("Air" + "France") sélectionne d'abord les entités les plus fréquentes, pas celles dont le nom correspond. Bug documenté. En base : `(:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(:Compagnie {nom: "AIR FRANCE"})` existe avec 270 incidents.
+
+---
+
+## Détail /stats — Garde-fou limité
+
+`"Donne-moi les 5 derniers incidents graves"` → /stats interprète silencieusement comme count sur sévérité=élevé (164). Pas de message "ce n'est pas une question d'agrégation". L'utilisateur ne comprend pas pourquoi il reçoit 164 au lieu d'une liste.
+
+---
+
+## GET /stats — Bug label connu
+
+Requête actuelle : `MATCH (i:Incident)` → 0 résultats (ancien label).
+Devrait être : `MATCH (i:IncidentSecu)` → 9 191. Qdrant : 27 195 chunks ✅ (non affecté).
+
+---
+
+## Voies démontrables au client (GPU up)
+
+| Voie | Ce qu'on peut montrer | Temps typique |
 |---|---|---|
-| GET /stats compte :Incident au lieu de :IncidentSecu | `/stats` | Modifier la requête Neo4j |
-| "graves" pluriel non reconnu | `/list` | Regex `grave` → `graves?` |
-| Nombres en lettres (trois, cinq) non reconnus | `/list` | Ajouter dict fr→int ou regex mots |
-| Pas de garde-fou hors-sujet | `/list` | Score de pertinence ou liste de mots-clés |
-| Phrasing sans fallback sur LLM | `/ask/incident-v2`, `/entity`, `/recommande` | Ajouter fallback texte brut comme sur /list |
-| `"preventive"` vs `"préventive"` dans les filtres actions | `/actions` | Normaliser dans le parseur ou en base |
+| `GET /health` | Santé des 3 services | < 1 s |
+| `/ask/incident-v2` | RAG sémantique libre, sources citées | 10–20 s |
+| `/ask/incident-v2/stats` | Comptages et répartitions fiables | 4–8 s |
+| `/ask/incident-v2/list` | Liste triée/filtrée, résultat immédiat | 5–15 s |
+| `/ask/incident-v2/actions` | Actions correctives/préventives par contexte | 4–30 s |
+| `/ask/incident-v2/recommande` | Incidents similaires + actions recommandées | 20–30 s |
+| `/ask/incident-v2/query` | Tout champ, count/liste/répartition | 4–8 s |
+| `/ask/incident-v2/entity` | Entités nommées exactes (EASYJET, HOP…) | 5–10 s |
+
+## Voies à NE PAS montrer telles quelles / Points de vigilance
+
+| Voie / Point | Risque | Recommandation |
+|---|---|---|
+| `GET /stats` | Affiche 0 incidents (bug label) | Cacher ou corriger la requête |
+| `/entity` avec "Air France" ou noms composés | Résultats incohérents | Tester avec noms courts exacts (EASYJET, HOP…) |
+| `/list` avec tournures familières | "les trois dernières fiches graves" → 5 incidents sans filtre | Prévenir l'utilisateur ou améliorer le parseur |
+| `/ask/info-securite`, `/ask/tickets`, `/ask (legacy)` | Corpus vide → "aucun résultat" systématique | Ne pas montrer, corpus à re-ingérer |
+
+## À corriger avant point client
+
+| Priorité | Problème | Voie | Fix |
+|---|---|---|---|
+| 🔴 | GET /stats compte :Incident (0 résultats) | `/stats` | `MATCH (i:IncidentSecu)` |
+| 🟠 | Entity: noms composés → mauvais résultats | `/entity` | Revoir le score de similarité / contraindre sur longueur min du token |
+| 🟡 | /list: nombres en lettres non reconnus | `/list` | Ajouter dict `{"un":1,"deux":2,"trois":3,"quatre":4,"cinq":5,"dix":10}` |
+| 🟡 | /list: pluriels de sévérité non reconnus (graves) | `/list` | `grave` → `graves?` dans regex |
+| 🟡 | /list: hors-sujet → liste par défaut sans avertissement | `/list` | Détecter absence de mots-clés métier |
+| 🟢 | /stats: pas de message si question non-agrégation | `/stats` | Ajouter détection intent liste → redirect |
