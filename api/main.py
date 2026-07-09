@@ -53,6 +53,17 @@ from schemas import (
     SourceInfoSecurite,
     AskResponseTickets,
     SourceTicket,
+    AskIncidentV2Response,
+    SourceIncidentV2,
+    AggregationResponse,
+    EntityLookupResponse,
+    EntityMatchResponse,
+    ActionLookupResponse,
+    ActionResult,
+    GenericQueryResponse,
+    ActionRecommandeeResponse,
+    RecommandationResponse,
+    StructuredListResponse,
 )
 from retrieval_info_securite import retrieve_info_securite
 from generation_info_securite import generate_answer_is
@@ -60,6 +71,21 @@ from retrieval_tickets import retrieve_tickets
 from generation_tickets import generate_answer_tickets
 from retrieval import retrieve
 from generation import build_sources, generate_answer
+from retrieval_incident_v2 import retrieve_incident_v2
+from generation_incident_v2 import generate_answer_incident_v2
+from aggregation_incident_v2 import run_aggregation
+from generation_aggregation import phrase_result
+from entity_lookup_incident_v2 import fetch_entity
+from generation_entity_lookup import phrase_entity_result
+from action_lookup_incident_v2 import run_action_lookup
+from generation_action_lookup import phrase_action_result
+from structured_list_incident_v2 import run_list_query
+from generation_list_incident_v2 import phrase_list_result
+from query_engine_incident_v2 import run_query, run_unified_query
+from generation_query import phrase_query_result, phrase_unified_result
+from field_catalog import champ_meta, champs_labellises
+from recommendation_incident_v2 import run_recommendation
+from generation_recommandation import phrase_recommendation
 
 
 # =====================================================================
@@ -71,6 +97,7 @@ NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD")
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
+OLLAMA_TIMEOUT = float(os.environ.get("OLLAMA_TIMEOUT", "120"))
 
 logging.basicConfig(
     level=logging.INFO,
@@ -104,7 +131,7 @@ async def lifespan(app: FastAPI):
         password=NEO4J_PASSWORD,
     )
     app.state.qdrant = QdrantWrapper(url=QDRANT_URL)
-    app.state.ollama = OllamaClient(url=OLLAMA_URL)
+    app.state.ollama = OllamaClient(url=OLLAMA_URL, timeout=OLLAMA_TIMEOUT)
 
     logger.info("Connexions ouvertes, l'API est prete")
 
@@ -449,6 +476,397 @@ async def stats(request: Request) -> StatsResponse:
             status_code=500,
             detail=f"Erreur recuperation stats : {str(e)}",
         )
+
+
+# =====================================================================
+# ENDPOINT : POST /ask/incident-v2
+# =====================================================================
+
+@app.post("/ask/incident-v2", response_model=AskIncidentV2Response)
+async def ask_incident_v2(request: Request, body: AskRequest) -> AskIncidentV2Response:
+    start = time.time()
+    try:
+        retrieval = retrieve_incident_v2(
+            question=body.question,
+            ollama=request.app.state.ollama,
+            qdrant=request.app.state.qdrant,
+            neo4j=request.app.state.neo4j,
+            top_k=body.top_k,
+        )
+        generation = generate_answer_incident_v2(
+            question=body.question,
+            retrieval_result=retrieval,
+            ollama=request.app.state.ollama,
+            neo4j=request.app.state.neo4j,
+        )
+        meta_champs = champ_meta(request.app.state.neo4j)
+        sources = [
+            SourceIncidentV2(
+                numero_fe=item.props.get("numero_fe"),
+                titre=item.props.get("titre"),
+                severite=item.props.get("severite"),
+                classification=item.props.get("classification"),
+                etat=item.props.get("etat"),
+                date_evenement=item.props.get("date_evenement"),
+                resume_llm=item.props.get("resume_llm"),
+                action_corrective=item.props.get("action_corrective"),
+                score=item.best_score,
+                matched_fields=item.matched_fields,
+                entites=item.entites,
+                champs=champs_labellises(item.props, meta_champs),
+            )
+            for item in retrieval.items
+        ]
+        return AskIncidentV2Response(
+            answer=generation.answer,
+            sources=sources,
+            metadata=AskResponseMetadata(
+                duration_ms=int((time.time() - start) * 1000),
+                n_chunks_retrieved=retrieval.n_chunks_retrieved,
+                n_incidents_unique=retrieval.n_direct,
+                n_incidents_expanded=0,
+                model_used=generation.model_used,
+            ),
+        )
+    except Exception as e:
+        logger.exception("Erreur lors du traitement de /ask/incident-v2")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =====================================================================
+# ENDPOINT : POST /ask/incident-v2/stats
+# =====================================================================
+
+_NOT_AGGREGATION_ANSWER = (
+    "Cette question ne semble pas être une demande de comptage ou de répartition. "
+    "Posez une question du type : \"Combien d'incidents en 2025 ?\", "
+    "\"Répartition par sévérité\", \"Incidents sérieux en 2024\"."
+)
+
+
+@app.post("/ask/incident-v2/stats", response_model=AggregationResponse)
+async def ask_incident_v2_stats(request: Request, body: AskRequest) -> AggregationResponse:
+    """Voie agrégation à vocabulaire FERMÉ (AggregationSpec) : champs limités
+    mais comportement très prévisible. Pour les contraintes hors vocabulaire
+    (compagnie, lieu...), utiliser /ask/incident-v2/query (moteur générique).
+    ⚠️ Limitation connue : une contrainte hors vocabulaire est ignorée
+    silencieusement (ex. « impliquant easyjet »)."""
+    try:
+        result = run_aggregation(
+            question=body.question,
+            ollama=request.app.state.ollama,
+            neo4j=request.app.state.neo4j,
+        )
+
+        if result["status"] == "not_aggregation":
+            return AggregationResponse(
+                answer=_NOT_AGGREGATION_ANSWER,
+                rows=[],
+            )
+
+        spec = result["spec"]
+        answer = phrase_result(
+            question=body.question,
+            spec=spec,
+            rows=result["rows"],
+            total=result["total"],
+            ollama=request.app.state.ollama,
+        )
+        return AggregationResponse(
+            answer=answer,
+            metric=spec.metric,
+            group_by=spec.group_by,
+            filters_applied=result["filters_applied"],
+            rows=result["rows"],
+            total=result["total"],
+        )
+    except Exception as e:
+        logger.exception("Erreur lors du traitement de /ask/incident-v2/stats")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =====================================================================
+# ENDPOINT : POST /ask/incident-v2/entity
+# =====================================================================
+
+@app.post("/ask/incident-v2/entity", response_model=EntityLookupResponse)
+async def ask_incident_v2_entity(request: AskRequest):
+    """Recherche d'incidents par nom d'entité satellite (compagnie, société, etc.)."""
+    start = time.time()
+    try:
+        matches = fetch_entity(
+            name=request.question,
+            neo4j=app.state.neo4j,
+        )
+        result = phrase_entity_result(
+            entity_query=request.question,
+            matches=matches,
+            ollama=app.state.ollama,
+        )
+        duration_ms = int((time.time() - start) * 1000)
+        return EntityLookupResponse(
+            answer=result.answer,
+            matches=[
+                EntityMatchResponse(
+                    label=m.label,
+                    rel=m.rel,
+                    entity_name=m.entity_name,
+                    incident_count=m.incident_count,
+                    sample_incidents=m.incidents[:10],
+                )
+                for m in result.matches
+            ],
+            metadata=AskResponseMetadata(
+                duration_ms=duration_ms,
+                n_chunks_retrieved=0,
+                n_incidents_unique=sum(m.incident_count for m in result.matches),
+                n_incidents_expanded=0,
+                model_used=result.model_used,
+            ),
+        )
+    except Exception as e:
+        logger.exception("Erreur lors du traitement de /ask/incident-v2/entity")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =====================================================================
+# ENDPOINT : POST /ask/incident-v2/actions
+# =====================================================================
+
+@app.post("/ask/incident-v2/actions", response_model=ActionLookupResponse)
+async def ask_incident_v2_actions(request: Request, body: AskRequest) -> ActionLookupResponse:
+    """Questions sur les actions correctives et préventives liées aux incidents."""
+    try:
+        result = run_action_lookup(
+            question=body.question,
+            ollama=request.app.state.ollama,
+            neo4j=request.app.state.neo4j,
+        )
+
+        if result["status"] == "not_action_query":
+            return ActionLookupResponse(
+                answer=(
+                    "Cette question ne semble pas porter sur les actions correctives "
+                    "ou préventives. Exemples : \"Quelles actions correctives pour les "
+                    "incidents FOD ?\", \"Actions en cours sur les incidents sérieux\", "
+                    "\"Combien d'actions préventives clôturées en 2025 ?\"."
+                ),
+                rows=[],
+            )
+
+        if result["status"] == "no_filters":
+            return ActionLookupResponse(
+                answer=(
+                    f"Votre question ne précise aucun critère reconnu (type d'action, "
+                    f"statut, responsable, mot-clé, sévérité, action à chaud...). "
+                    f"La base contient {result['total']} actions au total — précisez "
+                    f"votre question, par exemple : \"Quelles actions correctives pour "
+                    f"les incidents FOD ?\", \"Quelles actions sont encore en cours ?\", "
+                    f"\"Donne-moi les incidents avec une action à chaud\"."
+                ),
+                rows=[],
+                total=result["total"],
+            )
+
+        generation = phrase_action_result(
+            question=body.question,
+            rows=result["rows"],
+            total=result["total"],
+            spec=result["spec"],
+            ollama=request.app.state.ollama,
+        )
+
+        spec = result["spec"]
+        filters = {
+            k: v for k, v in spec.model_dump().items()
+            if k.startswith("f_") and v is not None
+        } if spec else {}
+
+        return ActionLookupResponse(
+            answer=generation.answer,
+            rows=[ActionResult(**r) for r in result["rows"]],
+            total=result["total"],
+            filters_applied=filters,
+        )
+    except Exception as e:
+        logger.exception("Erreur lors du traitement de /ask/incident-v2/actions")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =====================================================================
+# ENDPOINT : POST /ask/incident-v2/query  (moteur générique tous champs)
+# =====================================================================
+
+@app.post("/ask/incident-v2/query", response_model=GenericQueryResponse)
+async def ask_incident_v2_query(request: Request, body: AskRequest) -> GenericQueryResponse:
+    """Moteur unifié count/repartition/liste sur spec fermée — chiffres exacts garantis."""
+    try:
+        result = run_unified_query(
+            question=body.question,
+            ollama=request.app.state.ollama,
+            neo4j=request.app.state.neo4j,
+        )
+
+        if result["status"] == "parse_failed":
+            return GenericQueryResponse(
+                answer=(
+                    "Je n'ai pas réussi à interpréter cette question. Reformulez en "
+                    "mentionnant un critère précis : sévérité, année, condition lumineuse, "
+                    "présence de blessés, classification, ou demandez un comptage, "
+                    "une répartition ou une liste d'incidents."
+                ),
+            )
+
+        if result["status"] == "besoin_precision":
+            return GenericQueryResponse(
+                answer=(
+                    "Votre question ne porte pas sur les incidents de sécurité, ou manque "
+                    "de précision. Exemples : \"Combien d'incidents avec des blessés ?\", "
+                    "\"Les 5 derniers incidents de nuit\", \"Répartition par sévérité en 2025\"."
+                ),
+                spec_interpretee=result.get("spec_interpretee"),
+            )
+
+        generation = phrase_unified_result(
+            question=body.question,
+            result=result,
+            ollama=request.app.state.ollama,
+        )
+
+        spec = result["spec"]
+        resultat_brut = result["resultat_brut"]
+
+        filtres_lisibles = [
+            {"champ": k.replace("f_", ""), "op": "=", "valeur": str(v)}
+            for k, v in spec.model_dump().items()
+            if k.startswith("f_") and v is not None
+        ]
+
+        rows: list[dict] = []
+        total: int | None = None
+        if spec.output == "count":
+            total = int(resultat_brut) if resultat_brut is not None else 0
+        elif spec.output == "repartition":
+            rows = resultat_brut or []
+            total = sum(r.get("n", 0) for r in rows)
+        else:  # liste
+            rows = resultat_brut or []
+            total = len(rows)
+
+        return GenericQueryResponse(
+            answer=generation.answer,
+            intent=spec.output,
+            filtres=filtres_lisibles,
+            group_by=spec.group_by,
+            rows=rows,
+            total=total,
+            spec_interpretee=result["spec_interpretee"],
+            cypher_execute=result["cypher_execute"],
+            resultat_brut=resultat_brut,
+        )
+    except Exception as e:
+        logger.exception("Erreur lors du traitement de /ask/incident-v2/query")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =====================================================================
+# ENDPOINT : POST /ask/incident-v2/recommande
+# =====================================================================
+
+@app.post("/ask/incident-v2/recommande", response_model=RecommandationResponse)
+async def ask_incident_v2_recommande(request: Request, body: AskRequest) -> RecommandationResponse:
+    """Décrivez un événement : l'assistant retrouve les incidents similaires
+    et recommande les actions (préventives, correctives, à chaud) qui avaient
+    été prises pour eux."""
+    try:
+        result = run_recommendation(
+            description=body.question,
+            ollama=request.app.state.ollama,
+            qdrant=request.app.state.qdrant,
+            neo4j=request.app.state.neo4j,
+            # large : peu d'incidents portent des actions documentées (~10 %),
+            # il faut ratisser assez d'incidents similaires pour en trouver
+            top_k=max(body.top_k, 20),
+        )
+        generation = phrase_recommendation(
+            description=body.question,
+            result=result,
+            ollama=request.app.state.ollama,
+        )
+        return RecommandationResponse(
+            answer=generation.answer,
+            incidents_similaires=result.incidents,
+            actions=[
+                ActionRecommandeeResponse(
+                    type_action=a.type_action,
+                    titre=a.titre,
+                    fe_sources=a.fe_sources,
+                    statut=a.statut,
+                    responsable=a.responsable,
+                )
+                for a in result.actions
+            ],
+        )
+    except Exception as e:
+        logger.exception("Erreur lors du traitement de /ask/incident-v2/recommande")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =====================================================================
+# ENDPOINT : POST /ask/incident-v2/list
+# =====================================================================
+
+_NOT_LIST_ANSWER = (
+    "Cette question ressemble à un comptage plutôt qu'à une demande de liste. "
+    "Utilisez le mode **Agrégation / chiffres** ou l'endpoint "
+    "/ask/incident-v2/stats pour obtenir des totaux et répartitions."
+)
+
+
+@app.post("/ask/incident-v2/list", response_model=StructuredListResponse)
+async def ask_incident_v2_list(request: Request, body: AskRequest) -> StructuredListResponse:
+    """Déprécié — délègue à la logique de /query en forçant output='liste'."""
+    try:
+        result = run_unified_query(
+            question=body.question,
+            ollama=request.app.state.ollama,
+            neo4j=request.app.state.neo4j,
+        )
+
+        if result["status"] in ("parse_failed", "besoin_precision"):
+            return StructuredListResponse(answer=_NOT_LIST_ANSWER, records=[], count=0)
+
+        spec = result["spec"]
+
+        # Guard : si le moteur interprète comme count ou repartition → redirect
+        if spec.output != "liste":
+            return StructuredListResponse(answer=_NOT_LIST_ANSWER, records=[], count=0)
+
+        records = result["resultat_brut"] or []
+
+        generation = phrase_unified_result(
+            question=body.question,
+            result=result,
+            ollama=request.app.state.ollama,
+        )
+
+        filters = {
+            k: v for k, v in spec.model_dump().items()
+            if k.startswith("f_") and v is not None
+        }
+
+        return StructuredListResponse(
+            answer=generation.answer,
+            records=records,
+            count=len(records),
+            sort_by=spec.sort_by,
+            order=spec.order,
+            limit=spec.limit,
+            filters_applied=filters,
+        )
+    except Exception as e:
+        logger.exception("Erreur lors du traitement de /ask/incident-v2/list")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # =====================================================================
