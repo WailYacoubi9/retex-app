@@ -284,3 +284,135 @@ class AskResponseTickets(BaseModel):
     answer: str
     sources: list[SourceTicket] = Field(default_factory=list)
     metadata: AskResponseMetadata
+
+
+# =====================================================================
+# SCHÉMAS POUR /ask/incident-v2
+# =====================================================================
+
+class SourceIncidentV2(BaseModel):
+    numero_fe: Optional[str] = None
+    titre: Optional[str] = None
+    severite: Optional[str] = None
+    classification: Optional[str] = None
+    etat: Optional[str] = None
+    date_evenement: Optional[str] = None
+    resume_llm: Optional[str] = None
+    action_corrective: Optional[str] = None
+    score: float
+    matched_fields: list[str] = Field(default_factory=list)
+    entites: list[dict] = Field(default_factory=list)
+    # tous les champs non vides de la fiche, étiquetés avec les labels
+    # métier du schéma YAML : [{champ, label, valeur}]
+    champs: list[dict] = Field(default_factory=list)
+
+
+class AskIncidentV2Response(BaseModel):
+    answer: str
+    sources: list[SourceIncidentV2] = Field(default_factory=list)
+    metadata: AskResponseMetadata
+
+
+# =====================================================================
+# SCHÉMAS POUR /ask/incident-v2/stats
+# =====================================================================
+
+class AggregationResponse(BaseModel):
+    answer: str
+    metric: str = "count"
+    group_by: Optional[str] = None
+    filters_applied: dict = Field(default_factory=dict)
+    rows: list[dict] = Field(default_factory=list)
+    total: Optional[int] = None
+
+
+# =====================================================================
+# SCHÉMAS POUR /ask/incident-v2/entity
+# =====================================================================
+
+class EntityMatchResponse(BaseModel):
+    label: str
+    rel: str
+    entity_name: str
+    incident_count: int
+    sample_incidents: list[dict] = Field(default_factory=list)
+
+
+class EntityLookupResponse(BaseModel):
+    answer: str
+    matches: list[EntityMatchResponse] = Field(default_factory=list)
+    metadata: AskResponseMetadata
+
+
+# =====================================================================
+# SCHÉMAS POUR /ask/incident-v2/actions
+# =====================================================================
+
+class ActionResult(BaseModel):
+    fe: Optional[str] = None
+    titre_incident: Optional[str] = None
+    severite: Optional[str] = None
+    titre_action: Optional[str] = None
+    type_action: Optional[str] = None
+    statut: Optional[str] = None
+    responsable: Optional[str] = None
+    date_prevue: Optional[str] = None
+    date_cloture: Optional[str] = None
+    actions_efficaces: Optional[bool] = None  # jugement d'efficacité (niveau fiche)
+
+
+class ActionLookupResponse(BaseModel):
+    answer: str
+    rows: list[ActionResult] = Field(default_factory=list)
+    total: Optional[int] = None
+    filters_applied: dict = Field(default_factory=dict)
+
+
+# =====================================================================
+# SCHÉMAS POUR /ask/incident-v2/list
+# =====================================================================
+
+class StructuredListResponse(BaseModel):
+    answer: str
+    records: list[dict] = Field(default_factory=list)
+    count: int = 0
+    sort_by: str = "date_creation"
+    order: str = "desc"
+    limit: int = 5
+    filters_applied: dict = Field(default_factory=dict)
+
+
+# =====================================================================
+# SCHÉMAS POUR /ask/incident-v2/query (moteur générique)
+# =====================================================================
+
+class GenericQueryResponse(BaseModel):
+    answer: str
+    intent: Optional[str] = None
+    filtres: list[dict] = Field(default_factory=list)
+    group_by: Optional[str] = None
+    rows: list[dict] = Field(default_factory=list)
+    total: Optional[int] = None
+    erreurs: list[str] = Field(default_factory=list)
+    # Transparence : spec interprétée, Cypher exécuté, résultat brut
+    spec_interpretee: Optional[dict] = None
+    cypher_execute: Optional[str] = None
+    resultat_brut: Optional[object] = None
+
+
+# =====================================================================
+# SCHÉMAS POUR /ask/incident-v2/recommande
+# =====================================================================
+
+class ActionRecommandeeResponse(BaseModel):
+    type_action: str
+    titre: str
+    fe_sources: list[str] = Field(default_factory=list)
+    statut: Optional[str] = None
+    responsable: Optional[str] = None
+
+
+class RecommandationResponse(BaseModel):
+    answer: str
+    incidents_similaires: list[dict] = Field(default_factory=list)
+    actions: list[ActionRecommandeeResponse] = Field(default_factory=list)
