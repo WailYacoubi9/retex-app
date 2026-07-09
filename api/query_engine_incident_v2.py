@@ -828,7 +828,12 @@ _SHAPE_PAR_INCIDENT_RE = re.compile(
 )
 
 _COMBIEN_RE = re.compile(
-    r"\bcombien\b|\bquel\s+nombre\b|\btotal\b|\bnombre\s+de\b|\bcompte\b|\bcount\b",
+    r"\bcombien\b|\bquel\s+nombre\b|\btotal\b|\bnombre\b|\bcompte\b|\bcount\b",
+    re.IGNORECASE,
+)
+# Marqueurs explicites de comptage (pour forcer output=count quand le LLM a raté)
+_FORCE_COUNT_RE = re.compile(
+    r"\bcombien\b|\bquel\s+nombre\b|\bnombre\s+d\s*['''e]\b",
     re.IGNORECASE,
 )
 
@@ -841,7 +846,8 @@ _SEVERITY_PATTERNS: list[tuple[str, str]] = [
 ]
 
 _ORDER_ASC_RE = re.compile(
-    r"\banci(en|enne|ens|ennes)\b|plus\s+vieu[x]?\b|oldest\b|au\s+début\b|premier[s]?\b|les\s+premiers\b",
+    r"\banci(en|enne|ens|ennes)\b|plus\s+vieu[x]?\b|oldest\b|au\s+début\b"
+    r"|\bpremier[es]?[s]?\b|les\s+premi[eè]re?[s]?\b",
     re.IGNORECASE,
 )
 _SERIEUX_RE = re.compile(r"\bsérieus[e]?\b|serieux\b|serious\b", re.IGNORECASE)
@@ -952,6 +958,10 @@ def _postprocess_unified(spec: UnifiedQuerySpec, question: str) -> UnifiedQueryS
         # Fix C5 : forcer output=liste si la question ne contient pas de marqueur de comptage
         if spec.output == "count" and not _COMBIEN_RE.search(q):
             spec.output = "liste"  # type: ignore[assignment]
+        # Fix C3 : forcer output=count si marqueur fort ("combien", "nombre d'")
+        # if indépendant (pas elif) pour couvrir aussi le cas où Fix C5 vient de forcer "liste"
+        if spec.output == "liste" and _FORCE_COUNT_RE.search(q):
+            spec.output = "count"  # type: ignore[assignment]
 
         # Fix C2 : re-détecter la limite depuis la question (le LLM rate souvent les nombres
         # quand d'autres marqueurs dominent, ex. "les 10 actions préventives les plus anciennes")
