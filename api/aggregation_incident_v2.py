@@ -17,6 +17,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, ValidationError
 
+import prompt_store
 from clients import Neo4jClient, OllamaClient
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ class AggregationSpec(BaseModel):
     metric: Literal["count"] = "count"
     group_by: Optional[Literal[
         "severite", "classification", "traitement_termine",
-        "condition_lumineuse", "annee", "mois"
+        "condition_lumineuse", "actions_efficaces", "annee", "mois"
     ]] = None
     f_severite: Optional[Literal[
         "1 - faible", "2 - tolérable", "3 - important", "4 - élevé", "5 - intolérable"
@@ -40,40 +41,21 @@ class AggregationSpec(BaseModel):
     ]] = None
     f_condition_lumineuse: Optional[Literal["Jour", "Nuit"]] = None
     f_traitement_termine: Optional[bool] = None
+    f_actions_efficaces: Optional[bool] = None
+    f_avec_action_chaud: Optional[bool] = None  # présence d'une action corrective immédiate
     f_annee: Optional[int] = None
     f_mois: Optional[str] = None
     order: Literal["desc", "asc"] = "desc"
     limit: int = Field(default=10, ge=1)
 
 
-_PARSE_PROMPT = """\
-Tu es un assistant d'analyse d'incidents aéronautiques. Ta tâche est de convertir \
-une question en langage naturel en une spécification JSON d'agrégation.
 
-RÈGLES STRICTES :
-- Utilise UNIQUEMENT les valeurs listées pour chaque champ. Met null si non précisé.
-- group_by : seulement si la question demande une répartition/distribution/ventilation.
-- Si la question ne concerne pas un comptage ou une répartition, laisse TOUS les champs à null.
-- f_annee : entier (ex. 2025). f_mois : chaîne "YYYY-MM" (ex. "2025-03").
-
-NUANCES CRITIQUES — lis attentivement :
-1. "sévérité" (le champ) ≠ "sérieux" (la classification).
-   • "répartition par sévérité" → group_by = "severite", AUCUN filtre f_classification.
-   • "incidents sérieux" ou "incident sérieux" → f_classification = "Incident sérieux".
-   • Ces deux notions sont INDÉPENDANTES : ne les mélange jamais.
-2. "grave" / "élevé" → f_severite = "4 - élevé" ; "intolérable" → f_severite = "5 - intolérable".
-3. "jour" / "nuit" / "condition lumineuse" → group_by = "condition_lumineuse".
-4. Ne confonds pas "répartition par X" (→ group_by = X) avec un filtre sur X.
-5. limit doit être ≥ 1 (utilise 10 par défaut).
-
-Question : {question}
-"""
 
 
 def parse_question_to_spec(question: str, ollama: OllamaClient) -> Optional[AggregationSpec]:
     """Convertit une question NL en AggregationSpec via structured output."""
     schema = AggregationSpec.model_json_schema()
-    prompt = _PARSE_PROMPT.format(question=question)
+    prompt = prompt_store.rendre("agregation.parseur", question=question)
 
     for attempt in range(2):
         try:
@@ -95,6 +77,8 @@ def _is_degenerate(spec: AggregationSpec) -> bool:
         and spec.f_classification is None
         and spec.f_condition_lumineuse is None
         and spec.f_traitement_termine is None
+        and spec.f_actions_efficaces is None
+        and spec.f_avec_action_chaud is None
         and spec.f_annee is None
         and spec.f_mois is None
     )
@@ -103,7 +87,8 @@ def _is_degenerate(spec: AggregationSpec) -> bool:
 # ─── Construction Cypher déterministe ────────────────────────────────────────
 
 _DIRECT_FIELDS = {
-    "severite", "classification", "traitement_termine", "condition_lumineuse"
+    "severite", "classification", "traitement_termine", "condition_lumineuse",
+    "actions_efficaces",
 }
 
 
@@ -127,6 +112,16 @@ def build_cypher(spec: AggregationSpec) -> tuple[str, dict[str, Any]]:
     if spec.f_traitement_termine is not None:
         where_clauses.append("i.traitement_termine = $tt")
         params["tt"] = spec.f_traitement_termine
+
+    if spec.f_actions_efficaces is not None:
+        where_clauses.append("i.actions_efficaces = $eff")
+        params["eff"] = spec.f_actions_efficaces
+
+    if spec.f_avec_action_chaud is not None:
+        where_clauses.append(
+            "i.action_corrective IS NOT NULL" if spec.f_avec_action_chaud
+            else "i.action_corrective IS NULL"
+        )
 
     if spec.f_annee is not None:
         where_clauses.append("i.date_evenement STARTS WITH $annee")
