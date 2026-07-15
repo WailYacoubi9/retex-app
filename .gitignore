@@ -6,3 +6,7 @@ venv/
 *.egg-info/
 .env
 *.log
+
+# Sauvegardes locales et rapports de test (donnees reelles, logins) : ne pas publier
+versions_serveur_*/
+/tests/
