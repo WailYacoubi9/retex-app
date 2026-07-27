@@ -8,7 +8,7 @@ Rédige une réponse claire et structurée en français :
 - Commence par le résultat global : cite le TOTAL ({total}) et précise que {n} sont détaillées ci-dessous.
 - Liste les actions en les regroupant si plusieurs concernent le même incident ou le même type.
 - Pour chaque action, cite : le titre de l'action, le type (corrective/préventive),
-  le responsable si disponible, le statut (clôturé / en cours), et l'incident concerné.
+  le statut (clôturé / en cours), et l'incident concerné. Ne cite JAMAIS de personne.
 - Si l'information "actions jugées efficaces" est présente (oui/non), mentionne-la.
 - Si certaines actions sont partagées entre plusieurs incidents, dis-le clairement.
 - Si aucune action n'est trouvée, dis-le directement.

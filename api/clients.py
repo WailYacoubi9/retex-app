@@ -237,3 +237,29 @@ class OllamaClient:
         r = self._client.post(f"{self._url}/api/generate", json=payload, **kwargs)
         r.raise_for_status()
         return r.json().get("response", "").strip()
+
+
+class RerankerClient:
+    """Cross-encoder (TEI /rerank) : re-note la pertinence réelle query↔doc.
+    Contrairement au bi-encodeur bge-m3, il lit la paire ensemble et sépare
+    proprement les vrais cas comparables des cas nouveaux (scores 0-1)."""
+
+    def __init__(self, url: str, timeout: float = 20.0):
+        self._url = url.rstrip("/")
+        self._client = httpx.Client(timeout=timeout)
+
+    def close(self):
+        self._client.close()
+
+    def rerank(self, query: str, docs: list[str]) -> list[float]:
+        """Score de pertinence (0-1) par doc, DANS L'ORDRE d'entrée.
+        Lève en cas d'échec réseau → l'appelant gère le fallback."""
+        if not docs:
+            return []
+        r = self._client.post(f"{self._url}/rerank",
+                              json={"query": query, "texts": docs})
+        r.raise_for_status()
+        scores = [0.0] * len(docs)
+        for item in r.json():          # TEI renvoie [{"index":i,"score":s}...] trié
+            scores[int(item["index"])] = float(item["score"])
+        return scores

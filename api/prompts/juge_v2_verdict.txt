@@ -1,0 +1,82 @@
+Tu vérifies si un résumé est fidèle à sa fiche source (REX aéronautique).
+
+RÈGLE FONDAMENTALE
+Un fait présent dans la source mais rattaché à un autre événement, un
+autre acteur, un autre moment, un autre lieu ou un autre statut est une
+ERREUR, au même titre qu'un fait inventé. Vérifier que les mots existent
+dans la source ne suffit pas : vérifie les RELATIONS.
+
+MÉTHODE — pour chaque phrase du résumé, dans l'ordre :
+
+1. Cite le passage EXACT de la source qui appuie la phrase (copie
+   littérale, entre guillemets, dans le champ "ancrage").
+2. Si aucun passage exact ne peut être cité, l'erreur est OutE.
+   N'écris jamais une justification sans ancrage littéral.
+3. Applique la checklist ci-dessous. Une seule réponse "non" suffit à
+   marquer la phrase comme erronée.
+
+CHECKLIST (répondre pour chaque phrase avant de conclure)
+  - Chaque date ou heure citée est-elle rattachée dans la source au MÊME
+    événement que dans le résumé ?
+  - Chaque lieu cité est-il rattaché dans la source au MÊME événement ?
+  - Pour chaque verbe de constat ("confirme", "vérifie", "constate") :
+    sur QUOI porte exactement ce verbe dans la source ?
+  - Chaque acteur est-il celui que la source désigne ? (attention aux
+    chaînes de transmission à 3 acteurs ou plus)
+  - Chaque lien de cause à effet existe-t-il dans la source, dans le
+    MÊME sens ? (une cause présentée comme conséquence est une erreur)
+  - Chaque pronom ou reprise a-t-il le même antécédent que dans la source ?
+  - Chaque fait donné comme acquis est-il donné comme acquis dans la
+    source, et non comme probable, provisoire, ou en attente d'analyse ?
+
+TYPES D'ERREUR (vocabulaire fermé, n'en invente aucun autre)
+  PredE  : le prédicat contredit la source (action décrite différente, ou
+           sens inversé)
+  EntE   : acteur, entité ou attribut erroné, y compris quand un terme
+           métier est remplacé par un terme dont le référent est différent
+  CircE  : circonstance (lieu, heure, date) rattachée au mauvais événement
+           ou incorrecte
+  CorefE : pronom ou reprise renvoyant au mauvais antécédent
+  LinkE  : lien faux entre deux énoncés — ordre temporel inversé,
+           causalité ajoutée, cause présentée comme conséquence
+  OutE   : information absente de la source, y compris un jugement de
+           valeur ajouté ("illégalement", "en sécurité", "mauvaise
+           gestion", "tardivement") et une certitude ajoutée sur un fait
+           que la source donne comme provisoire ou probable
+  aucun  : la phrase est fidèle
+
+RÈGLES D'ARBITRAGE
+  - Simplification d'un terme métier qui PRÉSERVE le référent : pas une
+    erreur (ex. un statut opérationnel rendu par un équivalent courant).
+  - Substitution d'un terme métier qui CHANGE le référent : EntE.
+  - Fait donné comme acquis alors que la source le donne comme provisoire
+    ou en attente d'expertise : OutE.
+  - Une omission n'est JAMAIS une erreur de fidélité. Les omissions sont
+    traitées uniquement dans la partie couverture ci-dessous.
+
+COUVERTURE (axe séparé, sans effet sur le verdict de fidélité)
+Pour chaque fait clé fourni, indique s'il est présent dans le résumé.
+
+SOURCE :
+{source_json}
+
+FAITS CLÉS :
+{keyfacts_json}
+
+RÉSUMÉ À VÉRIFIER :
+{resume}
+
+Réponds UNIQUEMENT par ce JSON, sans texte autour :
+{
+  "phrases": [
+    {
+      "phrase": "<phrase du résumé, copiée>",
+      "ancrage": "<passage EXACT de la source, ou null>",
+      "type_erreur": "PredE|EntE|CircE|CorefE|LinkE|OutE|aucun",
+      "explication": "<une phrase, obligatoirement fondée sur l'ancrage>"
+    }
+  ],
+  "couverture": [
+    {"id": "k1", "present": true}
+  ]
+}

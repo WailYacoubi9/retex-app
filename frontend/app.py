@@ -55,6 +55,34 @@ EX_V2_RECO = [
     "Collision entre un escabeau et la porte d'un avion au poste de stationnement",
     "Déversement de kérosène pendant l'avitaillement",
 ]
+EX_V2_ANALYSTE = [
+    "Les incidents de nuit sont-ils proportionnellement plus graves que ceux de jour ?",
+    "Quel type d'événement a la plus forte proportion d'incidents graves ?",
+    "Parmi les incidents de nuit, quel type est le plus fréquent ?",
+    "Quelle compagnie est la plus impliquée dans les collisions aviaires ?",
+    "Les incursions de piste augmentent-elles ces dernières années ?",
+    "Quelle combinaison type × lieu × phase revient le plus sur les incidents graves ?",
+    "Répartition des actions par type ?",
+    "Raconte les incidents de dégivrage",
+]
+# Exemples pour l'onglet AUTOMATIQUE : un par voie, choisis pour bien router.
+EX_V2_AUTO = [
+    "Combien d'incidents de gravité 4 - élevé ?",              # -> agrégation
+    "Répartition des incidents par sévérité",                  # -> agrégation
+    "Raconte les incidents de collision aviaire",              # -> recherche
+    "Que s'est-il passé lors des incidents de dégivrage ?",    # -> recherche
+    "Combien d'actions correctives en cours ?",                # -> actions
+    "Quelles actions en retard sur leur échéance ?",           # -> actions
+    "Un camion a refusé la priorité à un avion au repoussage", # -> recommandation
+    "Les incidents de nuit sont-ils proportionnellement plus graves ?",  # -> analyse
+    "Les collisions aviaires suivent-elles une saisonnalité ?",          # -> analyse
+    "Quels types restent sans action corrective ?",                      # -> analyse
+    "Parmi les incidents de nuit, quel type est le plus fréquent ?",     # -> analyse (conditionnel)
+    "Que signifie SSLIA ?",                                    # -> sigle (déterministe)
+    "Montre-moi la fiche FNE/AA/NNNN",                         # -> fiche (déterministe)
+    "Quel agent fait le plus d'erreurs ?",                     # -> refus culture juste
+    "Quel est le coût total des incidents ?",                  # -> abstention
+]
 EX_LEGACY = [
     "Quels incidents impliquent un mauvais positionnement d'avion ?",
     "Y a-t-il eu des incidents avec des passagers agressifs ?",
@@ -86,6 +114,16 @@ def _post(path: str, body: dict) -> dict | None:
         st.error("Le serveur a mis trop de temps à répondre (>20 min). Réessayez.")
         return None
     except Exception as e:
+        st.error(f"Erreur API : {e}")
+        return None
+
+
+def _get(path: str, params: dict | None = None, timeout: float = 15.0) -> dict | None:
+    try:
+        r = httpx.get(f"{API_URL}{path}", params=params or {}, timeout=timeout)
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:  # noqa: BLE001
         st.error(f"Erreur API : {e}")
         return None
 
@@ -130,8 +168,21 @@ def render_sidebar() -> None:
     if stats:
         neo4j = stats.get("neo4j", {})
         qdrant = stats.get("qdrant", {})
-        st.sidebar.metric("Chunks Qdrant", f"{qdrant.get('points_count', 0):,}")
+        c1, c2 = st.sidebar.columns(2)
+        c1.metric("Incidents", f"{neo4j.get('incidents', 0):,}")
+        c2.metric("Chunks Qdrant", f"{qdrant.get('points_count', 0):,}")
+        st.sidebar.caption(f"dont enrichis (resume_llm) : {neo4j.get('incidents_enriched', 0):,}")
         st.sidebar.caption(f"API : {API_URL}")
+
+    st.sidebar.divider()
+    st.sidebar.caption(
+        "ℹ️ Vos questions et les réponses sont enregistrées (anonymisées : aucun "
+        "nom ni identifiant) pour évaluer et améliorer l'assistant. "
+        "Le REX analyse le système, jamais les personnes.")
+
+    # Mode démo : vue épurée pour la présentation (diagnostics repliés)
+    st.session_state["mode_demo"] = st.sidebar.toggle(
+        "🎓 Mode démo (vue épurée)", value=st.session_state.get("mode_demo", False))
 
 
 # ─── render générique ─────────────────────────────────────────────────────────
@@ -194,6 +245,10 @@ def render_v2_search() -> None:
 
 def _render_answer(resp: dict) -> None:
     answer = resp.get("answer", "")
+    if "culture juste" in answer:
+        st.warning("🛡️ **Refus culture juste** — le REX analyse le système, pas les individus.")
+        st.info(answer)
+        return
     if any(m in answer for m in ["n'ai pas trouvé", "Aucun incident pertinent", "non servi"]):
         st.info(answer)
     else:
@@ -369,7 +424,7 @@ def render_v2_entity() -> None:
 
 def render_v2_actions() -> None:
     st.caption("Questions sur les actions correctives, préventives et à chaud "
-               "liées aux incidents (statut, responsable, efficacité…).")
+               "liées aux incidents (statut, type, efficacité…).")
     _show_examples(EX_V2_ACTIONS, "sv2act")
     st.markdown("---")
 
@@ -387,7 +442,10 @@ def render_v2_actions() -> None:
         if resp:
             st.success(f"Réponse en {dur:.0f}s")
             answer = resp.get("answer", "")
-            if "ne semble pas porter" in answer or "aucun critère reconnu" in answer:
+            if "culture juste" in answer:
+                st.warning("🛡️ **Refus culture juste** — le REX analyse le système, pas les individus.")
+                st.info(answer)
+            elif "ne semble pas porter" in answer or "aucun critère reconnu" in answer:
                 st.warning(answer)
             else:
                 st.markdown(f"### Réponse\n{answer}")
@@ -497,7 +555,7 @@ def render_v2_reco() -> None:
                 for a in actions:
                     ic = icones.get(a.get("type_action", ""), "•")
                     statut = f" — {a['statut']}" if a.get("statut") else ""
-                    resp_a = f" — resp. {a['responsable']}" if a.get("responsable") else ""
+                    resp_a = ""  # responsable retiré (culture juste : jamais de personne)
                     st.markdown(
                         f"{ic} **[{a.get('type_action', '?')}]** {a.get('titre', '?')}  \n"
                         f"&nbsp;&nbsp;&nbsp;&nbsp;*Fiches : {', '.join(a.get('fe_sources', []))}"
@@ -655,6 +713,355 @@ def render_tickets() -> None:
             _render_meta(resp)
 
 
+# ─── mode INCIDENTS v2 — AUTOMATIQUE (routeur) ───────────────────────────────
+
+_LIBELLES_VOIE = {
+    "agregation": "📊 Agrégation / chiffres",
+    "recherche": "🔍 Recherche sémantique",
+    "actions": "🛠️ Actions correctives",
+    "recommandation": "💡 Recommandation",
+    "abstention": "🚫 Abstention (hors périmètre)",
+    "analyse": "🧮 Analyse (décomposé + calculé)",
+    "sigle": "📖 Sigle (glossaire validé)",
+    "fiche": "📄 Fiche exacte (par numéro FE)",
+}
+
+# Une ligne narrative par voie (mode démo + pédagogie du routage).
+_NARRATIF_VOIE = {
+    "agregation": "question → fiche typée (LLM) → Cypher déterministe → chiffre exact",
+    "recherche": "question → embeddings → passages pertinents → réponse rédigée sur sources",
+    "actions": "question → filtres typés → Cypher sur les actions de traitement",
+    "recommandation": "événement décrit → incidents similaires → actions qui avaient été prises",
+    "abstention": "hors périmètre ou refus : l'assistant ne devine pas",
+    "analyse": "question → plan analytique → opérateurs Cypher → synthèse verrouillée sur les faits",
+    "sigle": "lookup direct dans le glossaire validé — zéro LLM",
+    "fiche": "lookup exact par numéro FE — zéro LLM",
+}
+
+
+def render_v2_auto() -> None:
+    demo = st.session_state.get("mode_demo", False)
+    if demo:
+        st.caption("Un seul point d'entrée : l'assistant choisit lui-même la bonne voie "
+                   "(chiffres exacts, analyse, recherche, actions, recommandation) — "
+                   "et refuse ce qui sort du périmètre ou touche aux personnes.")
+        scores = _get("/eval/scores") or {}
+        kcols = st.columns(len(scores.get("scores", [])) or 1)
+        for c, sc in zip(kcols, scores.get("scores", [])):
+            if sc.get("pct") is not None:
+                c.metric(sc["grille"], f"{sc['ok']}/{sc['n']}")
+    else:
+        st.caption("Point d'entrée UNIQUE + INSPECTION : posez une question, et voyez TOUT — "
+                   "la voie choisie, les sources et leurs scores, l'interprétation du LLM, "
+                   "le Cypher exécuté, et pourquoi certaines sources sont écartées.")
+    _show_examples(EX_V2_AUTO, "sv2auto")
+    st.markdown("---")
+    question = _question_input("Ex : Quelles actions correctives pour les incidents FOD ?", "sv2auto")
+    col1, col2 = st.columns([4, 1])
+    with col1:
+        top_k = st.slider("top_k (voie recherche)", 1, 15, 8, key="topk_sv2auto")
+    with col2:
+        submit = _submit_button("Poser la question", "sv2auto")
+
+    if submit and question.strip():
+        with st.spinner("Routage + réponse…"):
+            t0 = time.time()
+            resp = _post("/ask/incident-v2/auto", {"question": question.strip(), "top_k": top_k})
+            dur = time.time() - t0
+        if not resp:
+            return
+
+        voie = resp.get("voie_choisie", "?")
+        diag = resp.get("diagnostics", {})
+        refus_personne = (diag.get("pre_routeur") == "refus_personne"
+                          or diag.get("statut_voie") == "refus_personne")
+        st.success(f"Réponse en {dur:.0f}s")
+        if refus_personne:
+            st.warning("🛡️ **Refus culture juste** — le REX analyse le système, "
+                       "jamais les individus. L'assistant refuse toute question "
+                       "rattachée à une personne et propose le niveau organisationnel.")
+        st.info(f"**Voie choisie automatiquement : {_LIBELLES_VOIE.get(voie, voie)}**  \n"
+                f"_{_NARRATIF_VOIE.get(voie, '')}_")
+        st.markdown(f"### Réponse\n{resp.get('answer', '')}")
+
+        # Historique de session (les résultats ne disparaissent plus au rerun)
+        st.session_state.setdefault("historique_auto", []).append(
+            {"question": question.strip(), "voie": voie,
+             "temps_ms": diag.get("temps_ms"), "answer": resp.get("answer", "")[:400]})
+
+        st.markdown("---")
+        st.markdown("### 🔬 Sous le capot" if demo else "## 🔬 Diagnostics")
+
+        # 1) Routage (routeur LLM ou voie déterministe pré-routeur)
+        with st.expander("🧭 Routage — pourquoi cette voie", expanded=not demo):
+            if diag.get("pre_routeur"):
+                st.write(f"**Voie déterministe pré-routeur :** `{diag['pre_routeur']}` "
+                         "(motif non ambigu — le routeur LLM n'est pas sollicité)")
+            else:
+                r = diag.get("routeur", {})
+                st.write(f"**Capacité choisie :** `{r.get('capacite')}`")
+                st.write(f"**Justification du routeur :** {r.get('justification', '')}")
+                if r.get("garde_fou"):
+                    st.write(f"**Garde-fou appliqué :** {r['garde_fou']}")
+            st.write(f"**Justification de la réponse :** {resp.get('justification', '')}")
+            if diag.get("statut_voie"):
+                st.caption(f"Statut de la voie : `{diag['statut_voie']}`")
+            if diag.get("numero_fe"):
+                st.caption(f"Fiche : {diag['numero_fe']}")
+            if diag.get("modele_reponse"):
+                st.caption(f"Modèle de génération : {diag['modele_reponse']}")
+            st.caption(f"Temps total : {diag.get('temps_ms', '?')} ms")
+
+        # 2) Sources & scores — recherche
+        if voie == "recherche":
+            n_ret = diag.get("n_incidents_retenus", 0)
+            with st.expander(f"📄 Sources récupérées & scores ({n_ret} retenues)", expanded=not demo):
+                st.caption(
+                    f"Seuil de pertinence : score ≥ {diag.get('seuil_score', '?')}. "
+                    f"{diag.get('n_chunks_recuperes', 0)} passages récupérés → "
+                    f"{n_ret} incidents retenus. Les fiches SOUS le seuil sont écartées "
+                    "(elles n'apparaissent pas ci-dessous)."
+                )
+                if diag.get("aucune_source_pertinente"):
+                    st.warning("Aucune source au-dessus du seuil → le LLM refuse de répondre "
+                               "sur des sources non pertinentes.")
+                for s in diag.get("sources", []):
+                    st.markdown(f"**{s['numero_fe']}** — {s['titre']}  ·  score **{s['score']}**")
+                    st.caption(f"champs qui ont matché : {', '.join(s['champs_correspondants']) or '—'}")
+                    if s.get("resume"):
+                        st.caption(f"résumé : {s['resume']}")
+
+        # 2bis) Incidents similaires — recommandation
+        if voie == "recommandation":
+            with st.expander("📄 Incidents similaires trouvés (+ scores)", expanded=not demo):
+                for s in diag.get("incidents_similaires", []):
+                    st.markdown(f"**{s.get('numero_fe', '?')}** — {s.get('titre', '')}  ·  "
+                                f"score **{s.get('score', '?')}**")
+                st.caption(f"{diag.get('n_actions_recommandees', 0)} actions recommandées extraites.")
+
+        # 3) Interprétation LLM + Cypher — agrégation
+        if voie == "agregation":
+            with st.expander("🧠 Interprétation par le LLM (ce qu'il a compris)", expanded=not demo):
+                st.caption("Filtres et intention extraits de votre question par le LLM.")
+                st.json(diag.get("interpretation_llm") or {})
+            if diag.get("cypher_execute"):
+                with st.expander("⚙️ Requête Cypher exécutée (calcul déterministe)"):
+                    st.code(diag["cypher_execute"], language="cypher")
+                    st.caption(f"Résultat brut : {diag.get('resultat_brut')}")
+
+        # 3bis) Plan analytique + faits calculés — analyse
+        if voie == "analyse":
+            ana = diag.get("analyste", {})
+            plan = ana.get("plan", {})
+            with st.expander("🧮 Plan analytique (décomposition de la question)", expanded=not demo):
+                st.caption("L'agent choisit un opérateur et les dimensions, dans un vocabulaire fermé.")
+                st.write(
+                    f"**Opérateur :** `{plan.get('operateur')}`"
+                    + (f"  ·  **dimension :** `{plan.get('dimension')}`" if plan.get('dimension') else "")
+                    + (f"  ·  **cible :** `{plan.get('cible')}`" if plan.get('cible') else "")
+                    + (f"  ·  **type :** `{plan.get('filtre_type')}`" if plan.get('filtre_type') else "")
+                    + (f"  ·  **sévérité :** `{plan.get('filtre_severite')}`" if plan.get('filtre_severite') else "")
+                    + (f"  ·  **granularité :** `{plan.get('granularite')}`" if plan.get('granularite') else "")
+                )
+            with st.expander("🔢 Faits calculés (déterministes, base = vérité)", expanded=not demo):
+                st.caption("Chiffres calculés par la base, avant la synthèse du LLM — c'est la preuve.")
+                faits = ana.get("faits")
+                if isinstance(faits, list):
+                    st.dataframe(faits, use_container_width=True)
+                elif isinstance(faits, dict) and "serie" in faits:
+                    st.write(f"**Tendance :** {faits.get('direction', '')}")
+                    st.dataframe(faits["serie"], use_container_width=True)
+                elif isinstance(faits, dict):
+                    st.json(faits)
+
+        # 4) Filtres + actions — actions
+        if voie == "actions":
+            with st.expander("🧠 Filtres interprétés + actions trouvées", expanded=not demo):
+                st.write("**Filtres :**", diag.get("filtres_interpretes", {}))
+                st.caption(f"Total : {diag.get('total', '?')}")
+                if diag.get("sources"):
+                    st.dataframe(diag["sources"], use_container_width=True)
+
+        # 5) Prompts exacts envoyés au LLM
+        r = diag.get("routeur", {})
+        if r.get("prompt") or diag.get("prompt_parseur") or diag.get("prompt_llm"):
+            with st.expander("📝 Prompt(s) exact(s) envoyé(s) au LLM"):
+                if r.get("prompt"):
+                    st.markdown("**1. Prompt du routeur** (classification de la question) :")
+                    st.code(r["prompt"])
+                if diag.get("prompt_parseur"):
+                    st.markdown("**2. Prompt du parseur** (interprétation → filtres/spec) :")
+                    st.code(diag["prompt_parseur"])
+                if diag.get("prompt_llm"):
+                    st.markdown("**2. Prompt de génération** (contexte + question envoyés au LLM) :")
+                    st.code(diag["prompt_llm"])
+
+        # 6) JSON brut complet
+        with st.expander("🗂 Diagnostics bruts (JSON complet)"):
+            st.json(diag)
+    elif submit:
+        st.warning("Saisissez une question.")
+
+    # 7) Avis utilisateur sur la DERNIÈRE réponse (persiste aux reruns Streamlit :
+    # les boutons vivent HORS du bloc submit, pilotés par l'historique de session)
+    hist_fb = st.session_state.get("historique_auto", [])
+    if hist_fb:
+        dernier = hist_fb[-1]
+        st.markdown("---")
+        st.markdown(f"**📮 Cette réponse vous a-t-elle été utile ?**  \n_{dernier['question'][:80]}_")
+        cfb1, cfb2, cfb3 = st.columns([1, 1, 3])
+        cle_fb = f"fb_{len(hist_fb)}"
+        if st.session_state.get(cle_fb):
+            st.caption("Merci pour votre avis ✔️")
+        else:
+            commentaire = cfb3.text_input("Commentaire (optionnel)", key=f"fbc_{len(hist_fb)}",
+                                          label_visibility="collapsed",
+                                          placeholder="Commentaire (optionnel)")
+            if cfb1.button("👍 Utile", key=f"fbp_{len(hist_fb)}", use_container_width=True):
+                _post("/feedback", {"question": dernier["question"], "voie": dernier["voie"],
+                                    "utile": True, "commentaire": commentaire})
+                st.session_state[cle_fb] = True
+                st.rerun()
+            if cfb2.button("👎 Pas utile", key=f"fbm_{len(hist_fb)}", use_container_width=True):
+                _post("/feedback", {"question": dernier["question"], "voie": dernier["voie"],
+                                    "utile": False, "commentaire": commentaire})
+                st.session_state[cle_fb] = True
+                st.rerun()
+
+    # 8) Historique de la session (persiste entre les questions)
+    hist = st.session_state.get("historique_auto", [])
+    if hist:
+        with st.expander(f"🕘 Historique de session ({len(hist)} question(s))"):
+            for h in reversed(hist[-15:]):
+                st.markdown(f"**{h['question']}**  →  "
+                            f"{_LIBELLES_VOIE.get(h['voie'], h['voie'])} "
+                            f"· {h.get('temps_ms', '?')} ms")
+                st.caption(h["answer"])
+
+
+# ─── mode INCIDENTS v2 — ANALYSTE (couche agentique, accès direct) ───────────
+
+def render_v2_analyste() -> None:
+    st.caption("Accès DIRECT à la couche analyste (celle qui intercepte les questions "
+               "analytiques dans l'onglet Automatique) : plan fermé → opérateurs Cypher "
+               "déterministes → synthèse verrouillée sur les faits. Le dernier exemple "
+               "montre un REFUS volontaire (question non analytique → l'analyste décline).")
+    _show_examples(EX_V2_ANALYSTE, "sv2ana")
+    st.markdown("---")
+    question = _question_input("Ex : Quel lieu est proportionnellement le plus grave ?", "sv2ana")
+    _, col2 = st.columns([4, 1])
+    with col2:
+        submit = _submit_button("Analyser", "sv2ana")
+    if submit and question.strip():
+        with st.spinner("Plan + calculs + synthèse…"):
+            t0 = time.time()
+            resp = _post("/ask/incident-v2/analyste", {"question": question.strip()})
+            dur = time.time() - t0
+        if not resp:
+            return
+        st.success(f"Réponse en {dur:.0f}s")
+        if resp.get("status") != "ok":
+            st.warning(f"L'analyste DÉCLINE (statut : `{resp.get('status')}`) — la question "
+                       "suivrait sa voie normale dans l'onglet Automatique.")
+            if resp.get("plan"):
+                st.json(resp["plan"])
+            st.info(resp.get("answer", ""))
+            return
+        st.markdown(f"### Réponse\n{resp.get('answer', '')}")
+        plan = resp.get("plan") or {}
+        with st.expander("🧮 Plan analytique", expanded=True):
+            st.write(f"**Opérateur :** `{plan.get('operateur')}`"
+                     + (f"  ·  **entité :** `{plan.get('entite')}`" if plan.get("entite") else "")
+                     + (f"  ·  **dimension :** `{plan.get('dimension')}`" if plan.get("dimension") else "")
+                     + (f"  ·  **cible :** `{plan.get('cible')}`" if plan.get("cible") else ""))
+            if plan.get("conditions"):
+                st.write("**Conditions (« parmi les X… ») :**", plan["conditions"])
+            if plan.get("dimensions"):
+                st.write("**Dimensions croisées :**", plan["dimensions"])
+        with st.expander("🔢 Faits calculés (déterministes)", expanded=True):
+            faits = resp.get("faits")
+            if isinstance(faits, list):
+                st.dataframe(faits, use_container_width=True)
+            elif faits is not None:
+                st.json(faits)
+    elif submit:
+        st.warning("Saisissez une question.")
+
+
+# ─── mode INCIDENTS v2 — GRILLES (console de mesure) ─────────────────────────
+
+_LIBELLES_GRILLE = {
+    "couvrant": "🧱 Couvrant (32 Q, 5 voies)",
+    "multihop": "🕸️ Multi-hop path-grounded (20 Q)",
+    "analyste": "🧮 Analyste — grille registre",
+    "metier": "🎓 Métier curé main (50 Q en cours)",
+    "culture_juste": "🛡️ Culture juste (pièges + zéro fuite)",
+    "reco": "💡 Reco — hit@k retrieval",
+}
+
+
+def render_v2_grilles() -> None:
+    st.caption("Console de mesure : derniers scores des grilles golden, lancement d'un run, "
+               "et corpus de capture (triplets question/réponse/contexte, masqués).")
+
+    data = _get("/eval/scores")
+    if data:
+        if data.get("run_en_cours"):
+            st.info("⏳ Un run de grille est en cours — les scores se mettront à jour à la fin.")
+        cols = st.columns(len(data.get("scores", [])) or 1)
+        for c, s in zip(cols, data.get("scores", [])):
+            nom = s.get("grille", "?")
+            if s.get("pct") is not None:
+                c.metric(_LIBELLES_GRILLE.get(nom, nom), f"{s['ok']}/{s['n']}",
+                         delta=f"{s['pct']} %")
+            else:
+                c.metric(_LIBELLES_GRILLE.get(nom, nom), "—")
+            if s.get("date"):
+                c.caption(s["date"][:16].replace("T", " "))
+
+    st.markdown("---")
+    c1, c2, c3 = st.columns([2, 1, 1])
+    with c1:
+        grille = st.selectbox("Grille à (re)lancer", list(_LIBELLES_GRILLE),
+                              format_func=lambda g: _LIBELLES_GRILLE[g], key="sel_grille")
+    with c2:
+        if st.button("▶️ Lancer", use_container_width=True, key="btn_run_grille"):
+            r = _post("/eval/run", {"grille": grille})
+            if r:
+                st.success("Run lancé" if r.get("status") == "lance"
+                           else "Un run est déjà en cours")
+    with c3:
+        if st.button("🔄 Rafraîchir", use_container_width=True, key="btn_refresh_grilles"):
+            st.rerun()
+
+    log = _get("/eval/log")
+    if log and log.get("log"):
+        with st.expander("📜 Log du dernier run" + (" (en cours…)" if log.get("run_en_cours") else ""),
+                         expanded=bool(log.get("run_en_cours"))):
+            st.code("\n".join(log["log"]))
+
+    fb = _get("/feedback/stats")
+    if fb and fb.get("total"):
+        st.markdown("---")
+        st.markdown(f"### 📮 Avis utilisateurs : **{fb['utiles']}/{fb['total']} utiles "
+                    f"({fb.get('pct')} %)**")
+        st.json(fb.get("par_voie", {}))
+
+    st.markdown("---")
+    st.markdown("### 📥 Capture récente (interactions réelles, masquées)")
+    fj = st.radio("Filtre", ["toutes", "jugeables (texte libre)", "non jugeables"],
+                  horizontal=True, key="filtre_capture")
+    params: dict = {"n": 30}
+    if fj != "toutes":
+        params["jugeable"] = fj.startswith("jugeables")
+    cap = _get("/capture/recent", params)
+    if cap:
+        st.caption(f"{cap.get('total', 0)} interactions capturées au total — le corpus des "
+                   "triplets pour le juge, et la source « questions réelles » du golden.")
+        if cap.get("interactions"):
+            st.dataframe(cap["interactions"], use_container_width=True)
+
+
 # ─── main ─────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -672,23 +1079,30 @@ def main() -> None:
 
     if mode == "Incidents Sécurité v2":
         onglets = st.tabs([
-            "🧭 Question libre", "💡 Recommandation", "🔍 Recherche sémantique",
+            "🎯 Automatique", "🧭 Question libre", "💡 Recommandation", "🔍 Recherche sémantique",
             "📊 Agrégation", "📋 Liste structurée", "🛠️ Actions", "🏢 Entités",
+            "🧮 Analyste", "🧪 Grilles",
         ])
         with onglets[0]:
-            render_v2_query()
+            render_v2_auto()
         with onglets[1]:
-            render_v2_reco()
+            render_v2_query()
         with onglets[2]:
-            render_v2_search()
+            render_v2_reco()
         with onglets[3]:
-            render_v2_stats()
+            render_v2_search()
         with onglets[4]:
-            render_v2_list()
+            render_v2_stats()
         with onglets[5]:
-            render_v2_actions()
+            render_v2_list()
         with onglets[6]:
+            render_v2_actions()
+        with onglets[7]:
             render_v2_entity()
+        with onglets[8]:
+            render_v2_analyste()
+        with onglets[9]:
+            render_v2_grilles()
 
     elif mode == "Tickets":
         render_tickets()

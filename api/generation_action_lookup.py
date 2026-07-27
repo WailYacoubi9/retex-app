@@ -29,13 +29,12 @@ def _format_context(rows: list[dict]) -> str:
     lines = []
     for r in rows:
         statut = r.get("statut") or "n/a"
-        resp   = r.get("responsable") or "non renseigné"
         eff    = r.get("actions_efficaces")
         eff_txt = "" if eff is None else f" | Jugées efficaces : {'oui' if eff else 'non'}"
         lines.append(
             f"- [{r.get('type_action','?').upper()}] \"{r.get('titre_action','?')}\" "
             f"| Incident : {r.get('fe','?')} — {r.get('titre_incident','?')} "
-            f"| Statut : {statut} | Responsable : {resp}{eff_txt}"
+            f"| Statut : {statut}{eff_txt}"
         )
     return "\n".join(lines)
 

@@ -20,12 +20,14 @@ from __future__ import annotations
 import difflib
 import json
 import logging
+import os
 import re
 from dataclasses import dataclass, field
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, ValidationError
 
+import glossaire
 import prompt_store
 from clients import Neo4jClient, OllamaClient
 from field_catalog import champ_meta as champ_meta_graphe
@@ -33,7 +35,8 @@ from field_catalog import module_meta as module_meta_graphe
 
 logger = logging.getLogger(__name__)
 
-LLM_MODEL = "qwen2.5:7b"
+# Modèle du parseur, surchargeable sans redéploiement (bancs d'essai 7b/14b/32b)
+LLM_MODEL = os.environ.get("QUERY_LLM_MODEL", "qwen2.5:14b")
 
 # Propriétés techniques jamais exposées au moteur
 _PROPS_EXCLUES = {"source_module", "last_indexed_at", "is_test_data", "incident_id"}
@@ -44,7 +47,7 @@ _ENUM_MAX_DISTINCT = 30
 # Descriptions/alias pour aider le LLM à mapper le vocabulaire utilisateur.
 # Optionnel : un champ absent d'ici reste interrogeable (nom + valeurs suffisent souvent).
 _DESCRIPTIONS = {
-    "numero_fe":            "référence de la fiche (ex FNE/25/0377)",
+    "numero_fe":            "référence de la fiche (ex FNE/AA/NNNN)",
     "titre":                "titre court de l'incident",
     "detail":               "narratif complet de l'événement",
     "severite":             "niveau de risque ECCAIRS",
@@ -75,12 +78,9 @@ _DESCRIPTIONS = {
     "phase_vol":            "phase de vol (stationnement, atterrissage...)",
     "compagnie":            "compagnie aérienne impliquée",
     "type_aeronef":         "type d'aéronef (A320...)",
-    "notifiant":            "qui a notifié l'événement",
     "service_responsable":  "service responsable du traitement",
     "societe":              "société / prestataire concerné",
     "entite_mise_en_cause": "entité mise en cause",
-    "emetteur":             "login de l'agent émetteur",
-    "verificateur":         "login de l'agent vérificateur",
     # pseudo-champs
     "a_des_actions":        "l'incident a des actions structurées (corrective/préventive) trackées",
 }
@@ -92,12 +92,11 @@ _RELATIONS = {
     "phase_vol":            ("EN_PHASE_DE_VOL",    "PhaseVol",      "label"),
     "compagnie":            ("IMPLIQUE_COMPAGNIE", "Compagnie",     "nom"),
     "type_aeronef":         ("IMPLIQUE_AERONEF",   "TypeAeronef",   "label"),
-    "notifiant":            ("NOTIFIE_PAR",        "Notifiant",     "label"),
     "service_responsable":  ("RESPONSABLE",        "Service",       "label"),
     "societe":              ("CONCERNE",           "Societe",       "nom"),
     "entite_mise_en_cause": ("MIS_EN_CAUSE",       "Entite",        "nom"),
-    "emetteur":             ("EMIS_PAR",           "Personne",      "login"),
-    "verificateur":         ("VERIFIE_PAR",        "Personne",      "login"),
+    # emetteur / verificateur / notifiant retirés volontairement : relations vers
+    # des personnes — filtres et répartitions par individu interdits (culture juste).
 }
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}")
@@ -724,7 +723,9 @@ class UnifiedQuerySpec(BaseModel):
     """Spec fermée pour le moteur unifié count/repartition/liste."""
     output: Literal["count", "repartition", "liste"] = "liste"
     group_by: Optional[Literal[
-        "severite", "classification", "condition_lumineuse", "annee", "mois", "etat"
+        "severite", "classification", "condition_lumineuse", "annee", "mois", "etat",
+        # dimensions par RELATION (satellites)
+        "compagnie", "type_evenement", "lieu", "phase_vol", "aeronef", "service",
     ]] = None
     f_severite: Optional[Literal[
         "1 - faible", "2 - tolérable", "3 - important", "4 - élevé", "5 - intolérable"
@@ -737,6 +738,13 @@ class UnifiedQuerySpec(BaseModel):
     f_presence_blesses: Optional[bool] = None
     f_annee: Optional[int] = None
     f_mois: Optional[str] = None
+    # Filtres par RELATION (dimensions satellites — schema-linking + match CONTAINS)
+    f_compagnie: Optional[str] = None
+    f_type_evenement: Optional[str] = None
+    f_lieu: Optional[str] = None
+    f_phase_vol: Optional[str] = None
+    f_aeronef: Optional[str] = None
+    f_service: Optional[str] = None
     sort_by: Literal["date_creation", "date_evenement", "severite"] = "date_creation"
     order: Literal["desc", "asc"] = "desc"
     limit: int = Field(default=5, ge=1, le=200)
@@ -760,6 +768,12 @@ _UNIFIED_SPEC_SCHEMA: dict = {
         "f_presence_blesses":  {"type": ["boolean", "null"]},
         "f_annee":             {"type": ["integer", "null"]},
         "f_mois":              {"type": ["string", "null"]},
+        "f_compagnie":         {"type": ["string", "null"]},
+        "f_type_evenement":    {"type": ["string", "null"]},
+        "f_lieu":              {"type": ["string", "null"]},
+        "f_phase_vol":         {"type": ["string", "null"]},
+        "f_aeronef":           {"type": ["string", "null"]},
+        "f_service":           {"type": ["string", "null"]},
         "sort_by":             {"type": "string", "enum": ["date_creation", "date_evenement", "severite"]},
         "order":               {"type": "string", "enum": ["desc", "asc"]},
         "limit":               {"type": "integer", "minimum": 1, "maximum": 200},
@@ -778,6 +792,17 @@ _UNIFIED_FIELDS_ALLOWED = {
 }
 _UNIFIED_FIELDS_DEFAULT = ["numero_fe", "titre", "severite", "date_creation"]
 _UNIFIED_FIELDS_LONG = {"action_corrective", "resume_llm"}  # tronqués à 200 chars
+
+# Dimensions par RELATION : dim -> (relation, label cible, propriété)
+# Sert à la fois aux filtres (f_<dim>) et au group_by par satellite.
+_REL_DIMS: dict[str, tuple[str, str, str]] = {
+    "compagnie":      ("IMPLIQUE_COMPAGNIE", "Compagnie",     "nom"),
+    "type_evenement": ("DE_TYPE",            "TypeEvenement", "label"),
+    "lieu":           ("LOCALISE_EN",        "Lieu",          "label"),
+    "phase_vol":      ("EN_PHASE_DE_VOL",    "PhaseVol",      "label"),
+    "aeronef":        ("IMPLIQUE_AERONEF",   "TypeAeronef",   "label"),
+    "service":        ("RESPONSABLE",        "Service",       "label"),
+}
 
 
 def _compute_unified_fields(question: str, spec: UnifiedQuerySpec) -> list[str]:
@@ -898,13 +923,12 @@ def _postprocess_unified(spec: UnifiedQuerySpec, question: str) -> UnifiedQueryS
                 spec.f_severite = val  # type: ignore[assignment]
                 break
 
-    # Classification : "sérieux" → "Incident sérieux"
-    if spec.f_classification is None and _SERIEUX_RE.search(q):
-        spec.f_classification = "Incident sérieux"  # type: ignore[assignment]
-
-    # Classification : "accident" → "Accident"
-    if spec.f_classification is None and _ACCIDENT_RE.search(q):
+    # Classification : mots-clés déterministes AUTORITAIRES (priment sur le LLM,
+    # que le prompt enrichi peut diluer — ex. "accidents" mal mappé en "Incident sérieux").
+    if _ACCIDENT_RE.search(q):
         spec.f_classification = "Accident"  # type: ignore[assignment]
+    elif _SERIEUX_RE.search(q):
+        spec.f_classification = "Incident sérieux"  # type: ignore[assignment]
 
     # Condition lumineuse
     if spec.f_condition_lumineuse is None:
@@ -1036,11 +1060,13 @@ def parse_unified_question(question: str, ollama: OllamaClient) -> Optional[Unif
         "unified_query.parseur",
         question=question,
         annee_courante=str(annee),
+        glossaire=glossaire.bloc_glossaire(),
     )
     for attempt in range(2):
         try:
             raw = ollama.generate_structured(prompt, _UNIFIED_SPEC_SCHEMA, model=LLM_MODEL, timeout=120.0)
             spec = UnifiedQuerySpec.model_validate_json(raw)
+            logger.info("UnifiedQuerySpec LLM brute (essai %d) : %s", attempt + 1, spec.model_dump())
             spec = _postprocess_unified(spec, question)
             logger.info("UnifiedQuerySpec (essai %d, post-process) : %s", attempt + 1, spec.model_dump())
             return spec
@@ -1071,7 +1097,7 @@ def _build_action_par_incident(
         f"WITH i ORDER BY i.{spec.sort_by} {spec.order.upper()} LIMIT $limit "
         f"OPTIONAL MATCH (i)-[r:A_POUR_ACTION]->(a:Action){opt_where} "
         f"WITH i, [x IN collect({{type: r.type_action, titre: a.titre_action, "
-        f"statut: a.statut, responsable: a.responsable, avancement: a.etat_avancement, "
+        f"statut: a.statut, avancement: a.etat_avancement, "
         f"date_prevue: a.date_prevue, date_cloture: a.date_cloture}}) "
         f"WHERE x.titre IS NOT NULL] AS actions "
         f"RETURN i.numero_fe AS numero_fe, i.titre AS titre, "
@@ -1099,7 +1125,7 @@ def _build_action_par_action(
         f"RETURN i.numero_fe AS numero_fe, i.titre AS titre, "
         f"i.severite AS severite, i.date_creation AS date_creation, "
         f"r.type_action AS type_action, a.titre_action AS titre_action, "
-        f"a.statut AS statut, a.responsable AS responsable, "
+        f"a.statut AS statut, "
         f"a.etat_avancement AS avancement, a.date_prevue AS date_prevue, "
         f"a.date_cloture AS date_cloture "
         f"ORDER BY i.{spec.sort_by} {spec.order.upper()} LIMIT $limit"
@@ -1140,8 +1166,23 @@ def build_unified_cypher(spec: UnifiedQuerySpec, fields: list[str]) -> tuple[str
         where.append("i.date_evenement STARTS WITH $mois")
         params["mois"] = spec.f_mois
 
+    # Filtres par RELATION (satellites) : une MATCH par dimension + match CONTAINS
+    # (schema-linking dans le prompt ; ici le CONTAINS résout "A320"→"A320 / 320",
+    # "EasyJet"→"EASYJET"). Une valeur inventée ne matche aucun nœud → 0, pas le total.
+    rel_matches: list[str] = []
+    for idx, dim in enumerate(_REL_DIMS):
+        val = getattr(spec, f"f_{dim}", None)
+        if not val:
+            continue
+        rel, lbl, prop = _REL_DIMS[dim]
+        alias, pkey = f"rel{idx}", f"rel{idx}"
+        rel_matches.append(f"MATCH (i)-[:{rel}]->({alias}:{lbl})")
+        where.append(f"toLower({alias}.{prop}) CONTAINS toLower(${pkey})")
+        params[pkey] = val
+    has_rel = bool(rel_matches)
+
     where_str = " AND ".join(where)
-    base = f"MATCH (i:IncidentSecu) WHERE {where_str}"
+    base = " ".join(["MATCH (i:IncidentSecu)"] + rel_matches) + f" WHERE {where_str}"
 
     if spec.output == "count":
         if spec.include_actions:
@@ -1159,7 +1200,8 @@ def build_unified_cypher(spec: UnifiedQuerySpec, fields: list[str]) -> tuple[str
                 f"WHERE {' AND '.join(aw)} RETURN count(DISTINCT a) AS n"
             )
         else:
-            cypher = f"{base} RETURN count(i) AS n"
+            cnt = "count(DISTINCT i)" if has_rel else "count(i)"
+            cypher = f"{base} RETURN {cnt} AS n"
 
     elif spec.output == "repartition":
         gb = spec.group_by or "severite"
@@ -1170,6 +1212,14 @@ def build_unified_cypher(spec: UnifiedQuerySpec, fields: list[str]) -> tuple[str
                 f"{base} AND i.date_evenement IS NOT NULL "
                 f"RETURN substring(i.date_evenement, 0, {n_char}) AS label, "
                 f"count(*) AS n ORDER BY n DESC LIMIT $rlimit"
+            )
+        elif gb in _REL_DIMS:
+            # Ventilation par satellite : traverse la relation puis regroupe
+            rel, lbl, prop = _REL_DIMS[gb]
+            cypher = (
+                f"{base} MATCH (i)-[:{rel}]->(grp:{lbl}) "
+                f"RETURN grp.{prop} AS label, count(DISTINCT i) AS n "
+                f"ORDER BY n DESC LIMIT $rlimit"
             )
         else:
             cypher = (

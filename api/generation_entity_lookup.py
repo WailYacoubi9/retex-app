@@ -11,6 +11,7 @@ import os
 import time
 from dataclasses import dataclass
 
+import prompt_store
 from clients import OllamaClient
 from entity_lookup_incident_v2 import EntityMatch
 
@@ -23,25 +24,6 @@ _NO_RESULT = (
     "Aucune entité correspondant à cette recherche n'a été trouvée dans la base "
     "d'incidents. Essayez un nom plus court ou vérifiez l'orthographe."
 )
-
-_PHRASE_PROMPT = """\
-Tu es un assistant expert en analyse d'incidents de sécurité aéronautique.
-
-On t'a fourni la liste des incidents liés à l'entité "{entity_query}" dans notre base.
-UTILISE EXACTEMENT LES CHIFFRES ET EXEMPLES FOURNIS, sans rien inventer.
-
-ENTITÉS TROUVÉES :
-{entities_block}
-
-CONSIGNES :
-- Commence par une phrase d'accroche mentionnant le nombre total d'incidents.
-- Identifie les 2-3 thèmes dominants en t'appuyant sur les résumés fournis (champ "resume").
-  Si le résumé est absent pour un incident, utilise le titre.
-- 3 à 6 phrases au total. Français naturel, ton expert.
-- Cite quelques numéros FE pour ancrer la réponse.
-
-Réponse :"""
-
 
 @dataclass
 class EntityLookupResult:
@@ -67,7 +49,8 @@ def phrase_entity_result(
         )
 
     entities_block = _format_matches(matches)
-    prompt = _PHRASE_PROMPT.format(
+    prompt = prompt_store.rendre(
+        "entity_lookup.reponse",
         entity_query=entity_query,
         entities_block=entities_block,
     )

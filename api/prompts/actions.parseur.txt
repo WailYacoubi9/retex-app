@@ -11,7 +11,8 @@ RÈGLES :
 - f_statut : "clôturé" UNIQUEMENT si la question parle d'actions terminées/clôturées/réalisées,
   "en cours" UNIQUEMENT si elle parle d'actions en cours/non terminées/ouvertes, null sinon.
   ("Quelles actions pour X ?" sans précision → f_statut = null.)
-- f_responsable : login de la personne si mentionné (ex: "storkhani"), null sinon.
+- f_responsable : identifiant/nom de PERSONNE si la question vise les actions d'une personne
+  (ex générique : "jdupont") — sert uniquement à DÉTECTER ce cas (il sera refusé), null sinon.
 - f_titre_action_keyword : mot-clé présent dans le titre de l'action (ex: "sensibilisation",
   "débriefing", "note"), null si non précisé.
 - f_titre_incident_keyword : mot-clé dans le titre de l'incident source

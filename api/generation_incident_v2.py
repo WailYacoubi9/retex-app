@@ -15,6 +15,7 @@ import os
 import time
 from dataclasses import dataclass
 
+import glossaire
 import prompt_store
 from clients import Neo4jClient, OllamaClient
 from field_catalog import champ_meta, libelle
@@ -55,6 +56,7 @@ class GenerationResultV2:
     answer: str
     model_used: str
     duration_ms: int
+    prompt: str = ""          # prompt exact envoyé au LLM (pour inspection)
 
 
 def generate_answer_incident_v2(
@@ -84,6 +86,7 @@ def generate_answer_incident_v2(
         answer=answer.strip(),
         model_used=LLM_MODEL,
         duration_ms=int((time.time() - start) * 1000),
+        prompt=prompt,
     )
 
 
@@ -159,7 +162,7 @@ def _format_item(item: RetrievedIncidentV2, meta: dict) -> list[str]:
         else:
             lbls = e.get("labels") or []
             lbl = lbls[0] if lbls else "?"
-            name = (ep.get("nom") or ep.get("label") or ep.get("login") or "")
+            name = (ep.get("nom") or ep.get("label") or "")  # jamais de login (culture juste)
             if name and name not in seen:
                 entites.append(f"{lbl}: {name}")
                 seen.add(name)
@@ -173,4 +176,5 @@ def _format_item(item: RetrievedIncidentV2, meta: dict) -> list[str]:
 
 def _build_prompt(question: str, context: str) -> str:
     return prompt_store.rendre("recherche_semantique.reponse",
-                               context=context, question=question)
+                               context=context, question=question,
+                               glossaire=glossaire.bloc_glossaire())

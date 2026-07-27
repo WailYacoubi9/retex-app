@@ -4,6 +4,7 @@ import logging
 import time
 from dataclasses import dataclass
 
+import prompt_store
 from clients import OllamaClient
 from retrieval_info_securite import RetrievalResultIS, RetrievedInfoSecurite
 
@@ -52,32 +53,8 @@ def generate_answer_is(
 
 def _build_prompt(question: str, items: list[RetrievedInfoSecurite]) -> str:
     context = _format_context(items)
-    return f"""Tu es un expert en securite aeronautique, specialiste des Information Securite (IS) de la DGAC.
-
-REGLES IMPERATIVES :
-1. Reponds UNIQUEMENT a partir des IS listees dans le CONTEXTE ci-dessous.
-2. N'invente AUCUNE information absente du contexte.
-3. Les IS du contexte ont été selectionnees par similarite semantique. Utilise-les si elles abordent le meme domaine de securite aeronautique que la question.
-4. Si une IS a un lien indirect mais reel avec la question, exploite-la en precisant le lien.
-5. Si les IS ne concernent PAS le sujet de la question (domaine completement different, ex: maintenance moteur vs securite operationnelle), reponds uniquement : "Aucune IS directement pertinente trouvee pour cette question."
-
-FORMAT :
-- Francais naturel, synthese experte.
-- Cite les numeros IS de maniere fluide (ex: "...comme precise dans l'IS 2021/03").
-- Privilegier la synthese par theme plutot qu'une liste brute.
-- 4 a 8 phrases maximum.
-
-CONTEXTE - INFORMATIONS SECURITE DISPONIBLES :
-
-Note : ces IS ont ete selectionnees par similarite semantique avec la question — utilise-les meme si le lien est indirect.
-
-{context}
-
-
-QUESTION :
-{question}
-
-REPONSE :"""
+    return prompt_store.rendre("info_securite.reponse",
+                               context=context, question=question)
 
 
 def _format_context(items: list[RetrievedInfoSecurite]) -> str:

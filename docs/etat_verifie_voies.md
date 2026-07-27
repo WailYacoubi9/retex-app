@@ -13,7 +13,7 @@
 |---|---|---|---|---|---|---|---|
 | `GET /health` | ✓ | Non | healthy, 3 services up | — | N/A | N/A | **VÉRIFIÉ OK** |
 | `GET /stats` | ✓ | Non | incidents=0 (bug label) | — | ✗ bug | N/A | **BUG** (label :Incident) |
-| `POST /ask/incident-v2` | ✓ | Phrasing seul (embed=bge-m3 + generate) | 18 s — 5 sources aviaire, réponse cohérente Lyon | 10 s — FNE/26/0240 trappe carburant score 0.798 | N/A (sémantique) | ✓ "pas trouvé" si hors corpus | **VÉRIFIÉ OK** |
+| `POST /ask/incident-v2` | ✓ | Phrasing seul (embed=bge-m3 + generate) | 18 s — 5 sources aviaire, réponse cohérente Lyon | 10 s — FNE/AA/NNNN trappe carburant score 0.798 | N/A (sémantique) | ✓ "pas trouvé" si hors corpus | **VÉRIFIÉ OK** |
 | `POST /ask/incident-v2/stats` | ✓ | Parsing (generate_structured) + phrasing | 5 s — 1 021 incidents 2025 ✅ | 4 s — répartition sévérité 9 176 total ✅ | ✅ exact vs Cypher | ⚠️ reformule silencieusement une question-liste en count | **VÉRIFIÉ OK** |
 | `POST /ask/incident-v2/list` | ✓ | **Parsing : REGEX** (0 ms) · Phrasing : 90 s timeout + fallback | 13 s — 5 records date_creation DESC ✅ | voir détail regex ci-dessous | ✅ exact vs Cypher (3/3) | ✓ count → redirect · ✗ hors-sujet → liste défaut | **VÉRIFIÉ OK** (limites regex) |
 | `POST /ask/incident-v2/entity` | ✓ | Phrasing seul (recherche Neo4j sans LLM) | 7 s — EASYJET 587 incidents ✅ | 8 s — "Air France" → résultats incohérents ✗ | EASYJET ✅ / Air France ✗ | — | **BUG PARTIEL** (matching multi-tokens) |
@@ -42,7 +42,7 @@ Relations A_POUR_ACTION   : 1 298
   curative                :     3
 FOD correctives via titre :   114   → /actions Q1 = 114 ✅
 EASYJET via IMPLIQUE_COMPAGNIE : 587 → /entity Q1 = 587 ✅
-5 derniers date_creation  : FNE/26/0243, 0244, 0241, 0242, 0240 → /list Q1 = idem ✅
+5 derniers date_creation  : FNE/AA/NNNN, 0244, 0241, 0242, 0240 → /list Q1 = idem ✅
 Incidents sérieux ASC     : FNE-2008ADL060, 058, 382, 540, 544 → /list ✅
 ```
 

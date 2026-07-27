@@ -87,7 +87,7 @@ REGLES IMPERATIVES :
 
 FORMAT DE LA REPONSE :
 - Reponds en francais naturel et fluide, comme un expert qui synthetise.
-- Cite les numeros FE de maniere fluide dans tes phrases (ex: "...comme l'illustre l'incident FNE/26/0241").
+- Cite les numeros FE de maniere fluide dans tes phrases (ex: "...comme l'illustre l'incident FNE/AA/NNNN").
 - PRIVILEGIE LA SYNTHESE par categories ou themes, plutot qu'une liste brute d'incidents.
 - Cite au maximum 5 numeros FE dans ta reponse, meme si plus sont fournis. Choisis les plus representatifs.
 - 4 a 8 phrases maximum.

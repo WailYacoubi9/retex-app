@@ -10,13 +10,18 @@ Pipeline :
 Couvre les questions du type :
   - "Quelles actions correctives ont été prises pour les incidents FOD ?"
   - "Quelles actions préventives sont encore en cours ?"
-  - "Quelles actions a prises storkhani ?"
   - "Combien d'actions clôturées en 2025 ?"
+
+Culture juste : une question rattachée à une personne (« les actions de X ») est
+DÉTECTÉE (f_responsable) puis REFUSÉE explicitement — jamais filtrée ni ignorée.
 """
 from __future__ import annotations
 
 import json
 import logging
+import os
+import re
+from datetime import date as _date
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, ValidationError
@@ -27,7 +32,7 @@ from field_catalog import module_meta
 
 logger = logging.getLogger(__name__)
 
-LLM_MODEL = "qwen2.5:7b"
+LLM_MODEL = os.environ.get("PLANNER_MODEL", "qwen2.5:14b")  # parseur = planification
 
 
 # ─── Spec contrainte ─────────────────────────────────────────────────────────
@@ -36,10 +41,12 @@ class ActionSpec(BaseModel):
     question_type: Literal["liste", "count"] = "liste"
     type_action: Optional[Literal["corrective", "préventive", "curative"]] = None
     f_statut: Optional[Literal["clôturé", "en cours"]] = None
+    f_en_retard: Optional[bool] = None           # échéance dépassée ET non clôturée
     f_responsable: Optional[str] = None          # login partiel ou complet
     f_titre_action_keyword: Optional[str] = None  # mot-clé dans le titre de l'action
     f_titre_incident_keyword: Optional[str] = None # mot-clé dans le titre de l'incident
-    f_annee_ajout: Optional[int] = None
+    f_annee_ajout: Optional[int] = None            # la VALEUR de l'année (nom hérité)
+    f_annee_champ: Optional[Literal["ajout", "cloture", "prevue"]] = None  # à quel champ-date l'année se rattache
     f_severite_incident: Optional[Literal[
         "1 - faible", "2 - tolérable", "3 - important", "4 - élevé", "5 - intolérable"
     ]] = None
@@ -49,6 +56,53 @@ class ActionSpec(BaseModel):
 
 
 
+
+
+# Traitement déterministe et ROBUSTE du statut (prime sur le 7b dilué).
+# Ordre impératif : retard → en cours (incl. négation d'une clôture) → clôturé.
+# La négation est testée AVANT le mot de clôture pour ne jamais INVERSER
+# ("pas encore terminées" = en cours, pas clôturé).
+_CLOS_WORD = r"(?:clôtur|cloturé|terminé|termine\b|réalisé|realise\b|finalisé|" \
+             r"\bfinies?\b|\bfini\b|fermé|ferme\b|soldé|achev)"
+_RETARD_RE = re.compile(
+    r"en\s+retard|échéance[^.,;!?]{0,15}?(?:dépass|pass|expir|échu)|"
+    r"délai[^.,;!?]{0,15}?dépass|hors\s+délai|en\s+souffrance|\bpérimé|\béchu", re.IGNORECASE)
+_EN_COURS_RE = re.compile(
+    r"ouvert|en\s+cours|en\s+suspens|en\s+attente|à\s+faire|à\s+traiter|"
+    r"à\s+finaliser|planifié|non\s+traité|en\s+attente", re.IGNORECASE)
+# négation (ne…pas / n'… / pas / non / sans / aucune / jamais) suivie, à courte
+# distance, d'un mot de clôture → « en cours »
+_NEG_CLOS_RE = re.compile(
+    r"(?:\bne\b|\bn'|\bpas\b|\bnon\b|\bsans\b|aucune?|jamais)[^.,;!?]{0,25}?" + _CLOS_WORD,
+    re.IGNORECASE)
+_CLOS_RE = re.compile(_CLOS_WORD, re.IGNORECASE)
+
+
+_PREVUE_RE = re.compile(r"prévue?s?|échéance|à\s+réaliser|planifié|attendue?s?\s+pour", re.IGNORECASE)
+
+
+def _postprocess_action_spec(spec: ActionSpec, question: str) -> ActionSpec:
+    """Force le statut sur mots-clés — robuste, sans inversion possible ; et
+    rattache l'année au bon champ-date selon le verbe (clôturées→cloture, etc.)."""
+    neg_clos = bool(_NEG_CLOS_RE.search(question))
+    if _RETARD_RE.search(question):
+        spec.f_en_retard = True
+        spec.f_statut = None  # la contrainte "en retard" (⊂ en cours) suffit
+    elif _EN_COURS_RE.search(question) or neg_clos:
+        spec.f_statut = "en cours"  # type: ignore[assignment]
+    elif _CLOS_RE.search(question):
+        spec.f_statut = "clôturé"  # type: ignore[assignment]
+
+    # Année polysémique : « clôturées en 2025 » = date_cloture ; « prévues en 2025 »
+    # = date_prevue ; sinon date_ajout (création). Ne s'applique que si une année existe.
+    if spec.f_annee_ajout:
+        if spec.f_statut == "clôturé" and not neg_clos:
+            spec.f_annee_champ = "cloture"  # type: ignore[assignment]
+        elif spec.f_en_retard or _PREVUE_RE.search(question):
+            spec.f_annee_champ = "prevue"  # type: ignore[assignment]
+        else:
+            spec.f_annee_champ = "ajout"  # type: ignore[assignment]
+    return spec
 
 
 def parse_question_to_spec(question: str, ollama: OllamaClient,
@@ -61,7 +115,11 @@ def parse_question_to_spec(question: str, ollama: OllamaClient,
         try:
             raw = ollama.generate_structured(prompt, schema, model=LLM_MODEL)
             spec = ActionSpec.model_validate_json(raw)
-            logger.info("ActionSpec (attempt %d): %s", attempt + 1, spec.model_dump())
+            spec = _postprocess_action_spec(spec, question)
+            d = spec.model_dump()
+            if d.get("f_responsable"):
+                d["f_responsable"] = "<detecte>"  # jamais de login en log
+            logger.info("ActionSpec (attempt %d): %s", attempt + 1, d)
             return spec
         except (ValidationError, json.JSONDecodeError, Exception) as e:
             logger.warning("ActionSpec parse failed (attempt %d): %s", attempt + 1, e)
@@ -78,7 +136,7 @@ _CLOTUREE = "(a.statut = '100' OR a.date_cloture IS NOT NULL)"
 def _has_action_filters(spec: ActionSpec) -> bool:
     """Filtres qui portent sur les nœuds Action (imposent la forme relationnelle)."""
     return any([
-        spec.type_action, spec.f_statut, spec.f_responsable,
+        spec.type_action, spec.f_statut,
         spec.f_titre_action_keyword, spec.f_annee_ajout,
     ])
 
@@ -123,7 +181,7 @@ def build_cypher_chaud(spec: ActionSpec) -> tuple[str, str, dict[str, Any]]:
         f"i.actions_efficaces AS actions_efficaces, "
         f"left(i.action_corrective, 250) AS titre_action, "
         f"'immédiate' AS type_action, "
-        f"null AS statut, null AS responsable, null AS date_prevue, null AS date_cloture "
+        f"null AS statut, null AS date_prevue, null AS date_cloture "
         f"ORDER BY i.date_evenement DESC "
         f"LIMIT $limit"
     )
@@ -144,9 +202,11 @@ def build_cypher(spec: ActionSpec) -> tuple[str, str, dict[str, Any]]:
     elif spec.f_statut == "en cours":
         where.append(f"NOT {_CLOTUREE}")
 
-    if spec.f_responsable:
-        where.append("toLower(coalesce(a.responsable, '')) CONTAINS toLower($responsable)")
-        params["responsable"] = spec.f_responsable
+    if spec.f_en_retard:
+        # échéance prévue dépassée ET action non clôturée
+        where.append(f"a.date_prevue IS NOT NULL AND a.date_prevue < $today AND NOT {_CLOTUREE}")
+        params["today"] = _date.today().isoformat()
+
 
     if spec.f_titre_action_keyword:
         where.append("toLower(a.titre_action) CONTAINS toLower($titre_action_kw)")
@@ -157,9 +217,11 @@ def build_cypher(spec: ActionSpec) -> tuple[str, str, dict[str, Any]]:
         params["titre_inc_kw"] = spec.f_titre_incident_keyword
 
     if spec.f_annee_ajout:
-        # date_ajout stockée en ISO (AAAA-MM-JJ) par ingest_actions.py
-        where.append("a.date_ajout STARTS WITH $annee_ajout")
-        params["annee_ajout"] = str(spec.f_annee_ajout)
+        # L'année se rattache au champ-date implicite du verbe (dates ISO AAAA-MM-JJ).
+        _champ = {"cloture": "date_cloture", "prevue": "date_prevue"}.get(
+            spec.f_annee_champ or "ajout", "date_ajout")
+        where.append(f"a.{_champ} STARTS WITH $annee")
+        params["annee"] = str(spec.f_annee_ajout)
 
     if spec.f_severite_incident:
         where.append("i.severite = $severite")
@@ -176,14 +238,17 @@ def build_cypher(spec: ActionSpec) -> tuple[str, str, dict[str, Any]]:
     where_str = " AND ".join(where)
     base = f"MATCH (i:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE {where_str}"
 
-    cypher_count = f"{base} RETURN count(*) AS n"
+    # count(DISTINCT a) et non count(*) : une action liée à plusieurs incidents
+    # ne doit être comptée qu'une fois (163 actions sont multi-incidents ; sinon
+    # préventives 437→532, clôturées 1089→1249 — sur-comptage par les arêtes).
+    cypher_count = f"{base} RETURN count(DISTINCT a) AS n"
     params["limit"] = spec.limit
     cypher_liste = (
         f"{base} "
         f"RETURN i.numero_fe AS fe, i.titre AS titre_incident, i.severite AS severite, "
         f"i.actions_efficaces AS actions_efficaces, "
         f"a.titre_action AS titre_action, r.type_action AS type_action, "
-        f"a.statut AS statut, a.responsable AS responsable, "
+        f"a.statut AS statut, "
         f"a.date_prevue AS date_prevue, a.date_cloture AS date_cloture "
         f"ORDER BY a.date_ajout DESC "
         f"LIMIT $limit"
@@ -208,6 +273,13 @@ def run_action_lookup(
 
     if spec is None:
         return {"status": "not_action_query", "spec": None, "rows": [], "total": None}
+
+    # Culture juste : une question rattachée à une PERSONNE (« les actions de X »)
+    # se REFUSE explicitement — jamais de retrait silencieux du filtre (sinon on
+    # servirait un chiffre global faux en silence : anti-pattern « contrainte
+    # évaporée »). Le champ f_responsable ne sert plus qu'à DÉTECTER la mention.
+    if spec.f_responsable:
+        return {"status": "refus_personne", "spec": spec, "rows": [], "total": None}
 
     # Forme incident-centrée pour l'action à chaud (sauf si des filtres
     # portant sur les nœuds Action imposent la forme relationnelle).
@@ -243,7 +315,6 @@ def run_action_lookup(
                                   else ("clôturé"
                                         if r.get("statut") == "100" or r.get("date_cloture")
                                         else "en cours")),
-            "responsable":       r.get("responsable"),
             "date_prevue":       r.get("date_prevue"),
             "date_cloture":      r.get("date_cloture"),
             "actions_efficaces": r.get("actions_efficaces"),

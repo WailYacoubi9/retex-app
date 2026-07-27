@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 LLM_MODEL = "qwen2.5:7b"
 
 NO_MATCH_MESSAGE = (
-    "Je n'ai pas trouvé d'incident suffisamment similaire dans la base pour "
-    "proposer des actions. Décrivez l'événement avec plus de détails "
-    "(lieu, matériel, type d'événement)."
+    "Aucun cas comparable dans la base : je préfère ne pas recommander d'actions "
+    "plutôt que d'en inventer à partir d'un incident sans rapport. Décrivez "
+    "l'événement avec plus de détails (lieu, matériel, type d'événement)."
 )
 
 
@@ -34,10 +34,9 @@ def _contexte(result: RecommandationResult) -> str:
     lignes = []
     for a in result.actions[:30]:
         statut = f" | statut : {a.statut}" if a.statut else ""
-        resp = f" | responsable : {a.responsable}" if a.responsable else ""
         lignes.append(
             f"- [{a.type_action.upper()}] \"{a.titre}\" "
-            f"| fiches : {', '.join(a.fe_sources[:5])}{statut}{resp}"
+            f"| fiches : {', '.join(a.fe_sources[:5])}{statut}"
         )
     return "\n".join(lignes) if lignes else "Aucune action documentée sur ces incidents."
 

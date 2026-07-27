@@ -2,6 +2,9 @@ Tu es un extracteur de spécification JSON pour des requêtes sur des fiches d'i
 
 ANNÉE EN COURS : {annee_courante}
 
+{glossaire}
+Utilise ce glossaire pour comprendre les sigles présents dans la question (ex. « incidents SSLIA » = service de sauvetage/incendie). N'invente aucune signification absente de ce glossaire.
+
 TÂCHE : analyser la question et retourner UN objet JSON strict conforme au schéma.
 
 ────────────────────────────────────────────────────────────────────────
@@ -18,6 +21,10 @@ CHAMP "output" — obligatoire
 CHAMP "group_by" — seulement si output="repartition", sinon null
 ────────────────────────────────────────────────────────────────────────
 Valeurs : "severite" | "classification" | "condition_lumineuse" | "annee" | "mois" | "etat"
+       | "compagnie" | "type_evenement" | "lieu" | "phase_vol" | "aeronef" | "service"
+⚠️  SUPERLATIF ("quelle compagnie a LE PLUS d'incidents ?", "le type le plus fréquent",
+    "quelle phase revient le plus") → output="repartition" + group_by = la dimension concernée
+    (compagnie / type_evenement / phase_vol …). La 1ʳᵉ ligne du résultat est la réponse.
 
 ────────────────────────────────────────────────────────────────────────
 FILTRES (tous null si non précisé dans la question)
@@ -85,7 +92,7 @@ ACTIONS DE TRAITEMENT STRUCTURÉES (nœuds :Action reliés aux incidents)
 ────────────────────────────────────────────────────────────────────────
 ⚠️  NE PAS CONFONDRE :
   - i.action_corrective : texte libre "action à chaud" sur la fiche → champ incident ordinaire
-  - nœuds :Action structurés : objets liés avec titre, responsable, statut, type
+  - nœuds :Action structurés : objets liés avec titre, statut, type
 
 Activer include_actions=true si la question porte sur les nœuds :Action structurés.
 Mots-clés : "actions correctives", "actions préventives", "actions curatives",
@@ -105,6 +112,17 @@ shape :
                    "donne-moi leurs actions", "pour les incidents graves, leurs actions")
   "par_action"   → la question part des actions ("les actions correctives en cours",
                    "les actions préventives FOD", "quelles actions de traitement sont planifiées")
+
+────────────────────────────────────────────────────────────────────────
+FILTRES PAR RELATION (satellites — null si absents ; recopie la valeur de la question)
+────────────────────────────────────────────────────────────────────────
+f_compagnie      compagnie citée      "impliquant EasyJet"→"EasyJet"
+f_type_evenement nature de l'événement "FOD"→"FOD" · "collisions aviaires"→"Collision aviaire" · "SSLIA"→"Dysfonctionnement du SSLIA" · "avitaillement"→"Problème avitaillement"
+f_lieu           lieu                 "sur la piste"→"Piste" · "parkings avions"→"Parking avions"
+f_phase_vol      phase de vol         "au décollage"→"Décollage" · "atterrissage"→"Atterrissage" · "stationnement"→"Stationnement"
+f_aeronef        type d'avion         "un A320"→"A320"
+f_service        service responsable  "responsabilité du SSLIA"→"SSLIA"
+Ils se COMBINENT : "collisions aviaires impliquant Air France" → f_type_evenement="Collision aviaire" + f_compagnie="Air France".
 
 ────────────────────────────────────────────────────────────────────────
 EXEMPLES
@@ -138,6 +156,15 @@ EXEMPLES
 
 "combien d'actions préventives clôturées en 2025 ?"
 → {"output":"count","include_actions":true,"action_type":"préventive","action_statut":"cloturee","shape":"par_action","f_annee":2025,"f_severite":null,"f_classification":null,"f_condition_lumineuse":null,"f_presence_blesses":null,"f_traitement_termine":null,"f_mois":null,"group_by":null,"sort_by":"date_creation","order":"desc","limit":5,"is_hors_domaine":false}
+
+"Combien d'incidents impliquant EasyJet ?"
+→ {"output":"count","f_compagnie":"EasyJet","is_hors_domaine":false}
+
+"Combien d'incidents FOD sur la piste ?"
+→ {"output":"count","f_type_evenement":"FOD","f_lieu":"Piste","is_hors_domaine":false}
+
+"Quelle compagnie a le plus d'incidents ?"
+→ {"output":"repartition","group_by":"compagnie","is_hors_domaine":false}
 
 ────────────────────────────────────────────────────────────────────────
 Question : {question}

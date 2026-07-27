@@ -9,4 +9,6 @@ venv/
 
 # Sauvegardes locales et rapports de test (donnees reelles, logins) : ne pas publier
 versions_serveur_*/
-/tests/
+tests/
+docs/audit_qualite_donnees.html
+api/glossaire_sigles.json

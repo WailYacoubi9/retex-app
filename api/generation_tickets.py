@@ -5,6 +5,7 @@ import os
 import time
 from dataclasses import dataclass
 
+import prompt_store
 from clients import OllamaClient
 from retrieval_tickets import RetrievalResultTickets, RetrievedTicket
 
@@ -68,30 +69,8 @@ def _build_prompt(question: str, items: list[RetrievedTicket]) -> str:
     expanded = [t for t in items if t.is_expanded]
     context = _format_context(direct, expanded)
 
-    return f"""Tu es un assistant expert qui analyse les tickets de support et de maintenance \
-du systeme intra'know pour aider les consultants a identifier les problemes recurrents.
-
-INSTRUCTIONS :
-1. Utilise UNIQUEMENT les informations des tickets fournis dans le CONTEXTE.
-2. N'invente aucune information absente du contexte.
-3. Si aucun ticket ne correspond vraiment a la question, dis-le clairement en une phrase.
-4. Sinon, fais une synthese utile et concrete pour un consultant.
-
-FORMAT DE REPONSE :
-- Commence par une phrase de synthese globale.
-- Cite les numeros de tickets concernes (ex : ticket #32446).
-- Mentionne les applications, projets, structures et types de problemes identifies.
-- Si des tickets lies ont ete trouves par proximite (meme application ou projet), \
-signale-le en fin de reponse.
-- Maximum 8 phrases. Francais professionnel.
-
-CONTEXTE - TICKETS INTRA'KNOW :
-
-{context}
-
-QUESTION : {question}
-
-REPONSE :"""
+    return prompt_store.rendre("tickets.reponse",
+                               context=context, question=question)
 
 
 def _format_context(

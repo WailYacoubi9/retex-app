@@ -4,7 +4,7 @@ Retrieval pour la voie incidents v2 (:IncidentSecu).
 Stratégie :
   1. Embed la question avec bge-m3
   2. Recherche Qdrant scopée sur source_module=incident_securite_v2
-  3. Filtre par score >= MIN_SCORE_THRESHOLD
+  3. Filtre par score >= MIN_SCORE
   4. Regroupe par incident_id (best_score + matched_fields)
   5. Enrichit chaque incident depuis Neo4j (sac complet de propriétés + entités)
 """
@@ -18,7 +18,7 @@ from clients import Neo4jClient, OllamaClient, QdrantWrapper
 
 logger = logging.getLogger(__name__)
 
-MIN_SCORE_THRESHOLD = 0.45
+MIN_SCORE = 0.45
 SOURCE_MODULE = "incident_securite_v2"
 
 
@@ -56,8 +56,8 @@ def retrieve_incident_v2(
     )
     logger.info("Qdrant returned %d chunks (module=%s)", len(chunks), SOURCE_MODULE)
 
-    relevant = [c for c in chunks if c.get("score", 0.0) >= MIN_SCORE_THRESHOLD]
-    logger.info("Chunks above threshold (%.2f): %d / %d", MIN_SCORE_THRESHOLD, len(relevant), len(chunks))
+    relevant = [c for c in chunks if c.get("score", 0.0) >= MIN_SCORE]
+    logger.info("Chunks above threshold (%.2f): %d / %d", MIN_SCORE, len(relevant), len(chunks))
 
     if not relevant:
         return RetrievalResultV2(n_chunks_retrieved=len(chunks), below_threshold=True)
@@ -101,9 +101,15 @@ def _enrich(
     incident_id: str,
     group: dict,
 ) -> Optional[RetrievedIncidentV2]:
+    # Allow-list de relations : les satellites ANALYTIQUES uniquement. Personne,
+    # Notifiant (nominatif) n'entrent JAMAIS dans le contexte (culture juste,
+    # cf. confidentialite.py — même précédent que le legacy retrieval.py).
     cypher = """
     MATCH (i:IncidentSecu {incident_id: $id})
     OPTIONAL MATCH (i)-[r]->(n)
+    WHERE type(r) IN ['DE_TYPE','LOCALISE_EN','EN_PHASE_DE_VOL','IMPLIQUE_COMPAGNIE',
+                      'IMPLIQUE_AERONEF','RESPONSABLE','A_POUR_FACTEUR','A_POUR_ACTION',
+                      'CONCERNE','MIS_EN_CAUSE']
     RETURN properties(i) AS props,
            collect({rel: type(r), labels: labels(n), props: properties(n)}) AS entites
     """

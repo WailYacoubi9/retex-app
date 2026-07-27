@@ -69,9 +69,8 @@ def _contexte_actions_par_incident(rows: list[dict]) -> str:
         if actions:
             for a in actions:
                 s = _statut_action(a.get("statut"))
-                resp = a.get("responsable") or "?"
                 lignes.append(
-                    f"    [{a.get('type', '?')}] {a.get('titre', '?')} — {s} (resp: {resp})"
+                    f"    [{a.get('type', '?')}] {a.get('titre', '?')} — {s}"
                 )
         else:
             lignes.append("    (aucune action de traitement structurée)")
@@ -82,10 +81,9 @@ def _contexte_actions_par_action(rows: list[dict]) -> str:
     lignes: list[str] = []
     for r in rows:
         s = _statut_action(r.get("statut"))
-        resp = r.get("responsable") or "?"
         lignes.append(
             f"- {r.get('numero_fe')} | [{r.get('type_action', '?')}] "
-            f"{r.get('titre_action', '?')} — {s} (resp: {resp})"
+            f"{r.get('titre_action', '?')} — {s}"
         )
     return "\n".join(lignes)
 
@@ -106,6 +104,13 @@ def _filtres_unified_en_clair(spec) -> str:  # spec: UnifiedQuerySpec
         parts.append(f"année={spec.f_annee}")
     if spec.f_mois:
         parts.append(f"mois={spec.f_mois}")
+    # Filtres par relation (satellites)
+    for dim, etiq in (("f_compagnie", "compagnie"), ("f_type_evenement", "type"),
+                      ("f_lieu", "lieu"), ("f_phase_vol", "phase"),
+                      ("f_aeronef", "aéronef"), ("f_service", "service")):
+        val = getattr(spec, dim, None)
+        if val:
+            parts.append(f"{etiq}={val}")
     return ", ".join(parts) or "aucun filtre"
 
 

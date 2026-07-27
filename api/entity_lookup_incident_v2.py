@@ -26,9 +26,10 @@ _ENTITY_LABELS = [
     ("TypeEvenement", "label", "DE_TYPE"),
     ("Lieu",          "label", "LOCALISE_EN"),
     ("PhaseVol",      "label", "EN_PHASE_DE_VOL"),
-    ("Notifiant",     "label", "NOTIFIE_PAR"),
     ("Service",       "label", "RESPONSABLE"),
-    ("Personne",      "login", "EMIS_PAR"),
+    # Personne et Notifiant retirés volontairement : lookup par personne interdit
+    # (culture juste, cf. confidentialite.py). Societe/Entite restent consultables
+    # au niveau d'une fiche — jamais en classement.
 ]
 
 # Mots vides à ignorer lors de la tokenisation

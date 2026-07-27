@@ -1,0 +1,23 @@
+Tu extrais les faits clés d'une fiche de retour d'expérience (REX)
+aéronautique. Un fait clé est une phrase courte portant UNE seule
+information, avec au plus 2 ou 3 entités.
+
+Extrais les faits clés de la fiche ci-dessous. Couvre l'ensemble des
+champs fournis (detail, action, analyse, cause*, verification).
+
+Marque chaque fait clé comme "critique" s'il relève d'une de ces
+catégories, sinon "secondaire" :
+  - élément constitutif du danger (proximité d'un réacteur, durée
+    d'exposition, ampleur d'une panne, quantification d'une fuite)
+  - cause ou facteur explicatif
+  - action corrective ou mesure prise
+  - conséquence opérationnelle (retard, arrêt d'exploitation, refus
+    d'embarquement)
+
+N'invente aucun fait. Reformule au plus près de la fiche.
+
+FICHE :
+{source_json}
+
+Réponds UNIQUEMENT par ce JSON, sans texte autour :
+{"keyfacts": [{"id": "k1", "fait": "...", "importance": "critique"}]}

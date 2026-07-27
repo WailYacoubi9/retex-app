@@ -71,7 +71,7 @@ class SourceIncident(BaseModel):
 
     numero_fe: Optional[str] = Field(
         default=None,
-        description="Numero de Fiche d'Evenement (ex: FNE/26/0245).",
+        description="Numero de Fiche d'Evenement (ex: FNE/AA/NNNN).",
     )
 
     titre: Optional[str] = Field(
@@ -271,7 +271,6 @@ class SourceTicket(BaseModel):
     client: Optional[str] = None
     structure: Optional[str] = None
     urgence: Optional[str] = None
-    individu: Optional[str] = None
     date_nc: Optional[str] = None
     llm_resume: Optional[str] = None
     llm_domaine_technique: Optional[str] = None
@@ -355,7 +354,6 @@ class ActionResult(BaseModel):
     titre_action: Optional[str] = None
     type_action: Optional[str] = None
     statut: Optional[str] = None
-    responsable: Optional[str] = None
     date_prevue: Optional[str] = None
     date_cloture: Optional[str] = None
     actions_efficaces: Optional[bool] = None  # jugement d'efficacité (niveau fiche)
@@ -409,7 +407,6 @@ class ActionRecommandeeResponse(BaseModel):
     titre: str
     fe_sources: list[str] = Field(default_factory=list)
     statut: Optional[str] = None
-    responsable: Optional[str] = None
 
 
 class RecommandationResponse(BaseModel):
