@@ -12,3 +12,4 @@ versions_serveur_*/
 tests/
 docs/audit_qualite_donnees.html
 api/glossaire_sigles.json
+docs/defauts_qualite_donnees.md

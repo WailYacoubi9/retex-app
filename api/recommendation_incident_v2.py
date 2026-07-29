@@ -142,24 +142,26 @@ def _filtrer_par_rerank(description, items, reranker):
     - si le meilleur score < seuil → liste vide → l'appelant s'abstient ;
     - ok=False → reranker indisponible → l'appelant retombe sur le filtre LLM."""
     if reranker is None:
-        return items, False
+        return items, False, {}
     if len(items) <= 1:
-        return items, True
+        return items, True, {}
     try:
         scores = reranker.rerank(description, [_doc_rerank(it) for it in items])
     except Exception as e:  # noqa: BLE001
         logger.warning("Reranker indisponible (fallback filtre LLM) : %s", e)
-        return items, False
+        return items, False, {}
     paires = sorted(zip(items, scores), key=lambda x: -x[1])
     top = paires[0][1] if paires else 0.0
+    # scores reranker par fiche (exposés pour la confiance de la synthèse)
+    scores_map = {(it.props.get("numero_fe") or "?"): round(s, 3) for it, s in paires}
     if top < _SEUIL_ABSTENTION:
         logger.info("Rerank : top=%.3f < abstention %.2f → aucun cas comparable",
                     top, _SEUIL_ABSTENTION)
-        return [], True
+        return [], True, scores_map
     gardes = [it for it, s in paires if s >= _SEUIL_GARDE][:_MAX_GARDES]
     logger.info("Rerank : top=%.3f, %d gardés / %d (abst %.2f / garde %.2f)",
                 top, len(gardes), len(items), _SEUIL_ABSTENTION, _SEUIL_GARDE)
-    return gardes, True
+    return gardes, True, scores_map
 
 
 def run_recommendation(
@@ -176,6 +178,7 @@ def run_recommendation(
         qdrant=qdrant,
         neo4j=neo4j,
         top_k=top_k,
+        hybrid=True,  # rappel lexical (BM25+RRF) si HYBRID_RETRIEVAL=1 ; sinon dense pur
     )
 
     if retrieval.below_threshold or not retrieval.items:
@@ -184,7 +187,7 @@ def run_recommendation(
 
     # Re-jugement de pertinence sur le CONTENU. Voie principale : cross-encoder
     # (sépare vraies vs nouvelles). Fallback : filtre LLM si le reranker est down.
-    items, ok = _filtrer_par_rerank(description, retrieval.items, reranker)
+    items, ok, rerank_scores = _filtrer_par_rerank(description, retrieval.items, reranker)
     if not ok:
         items = _filtrer_pertinents(description, retrieval.items, ollama)
     if not items:
@@ -202,9 +205,13 @@ def run_recommendation(
         incidents.append({
             "numero_fe": fe,
             "titre": props.get("titre"),
+            "description": " ".join(str(props.get("detail") or props.get("resume_llm") or "").split())[:300],
             "severite": props.get("severite"),
             "date_evenement": props.get("date_evenement"),
-            "score": round(item.best_score, 3),
+            "score": round(item.best_score, 3),          # cosinus dense (0.0 si trouvé par lexical)
+            "rerank_score": rerank_scores.get(fe),        # pertinence cross-encoder 0-1
+            "matched_fields": item.matched_fields,        # champ(s) d'où vient la similarité
+            "lexical_only": item.lexical_only,            # True = remonté par mot-clé (BM25), pas par le dense
         })
 
         # Action à chaud (champ de la fiche)

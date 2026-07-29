@@ -726,6 +726,7 @@ class UnifiedQuerySpec(BaseModel):
         "severite", "classification", "condition_lumineuse", "annee", "mois", "etat",
         # dimensions par RELATION (satellites)
         "compagnie", "type_evenement", "lieu", "phase_vol", "aeronef", "service",
+        "societe", "entite",
     ]] = None
     f_severite: Optional[Literal[
         "1 - faible", "2 - tolérable", "3 - important", "4 - élevé", "5 - intolérable"
@@ -745,6 +746,8 @@ class UnifiedQuerySpec(BaseModel):
     f_phase_vol: Optional[str] = None
     f_aeronef: Optional[str] = None
     f_service: Optional[str] = None
+    f_societe: Optional[str] = None
+    f_entite: Optional[str] = None
     sort_by: Literal["date_creation", "date_evenement", "severite"] = "date_creation"
     order: Literal["desc", "asc"] = "desc"
     limit: int = Field(default=5, ge=1, le=200)
@@ -754,6 +757,19 @@ class UnifiedQuerySpec(BaseModel):
     action_type: Optional[Literal["corrective", "préventive", "curative"]] = None
     action_statut: Optional[Literal["en_cours", "cloturee"]] = None
     shape: Literal["par_incident", "par_action"] = "par_incident"
+    # ─── Lot C : opérateur de GRAPHE (degré/seuil HAVING, voisin commun) ──────
+    # Rempli par le LLM (généralise aux paraphrases) ET/OU figé par un filet
+    # déterministe (cf. _postprocess_unified). Compilé par graph_query.execute_graph_spec.
+    graph_pattern: Optional[Literal["degree", "shared"]] = None
+    graph_anchor: Optional[Literal[
+        "incident", "action", "compagnie", "type_evenement", "lieu",
+        "phase_vol", "aeronef", "service", "societe", "entite"]] = None
+    graph_via: Optional[Literal[
+        "incident", "action", "compagnie", "type_evenement", "lieu",
+        "phase_vol", "aeronef", "service", "societe", "entite"]] = None
+    graph_op: Literal[">=", ">", "=", "<=", "<"] = ">="
+    graph_n: int = 2
+    graph_anchors_fe: list[str] = Field(default_factory=list)
 
 
 _UNIFIED_SPEC_SCHEMA: dict = {
@@ -774,6 +790,8 @@ _UNIFIED_SPEC_SCHEMA: dict = {
         "f_phase_vol":         {"type": ["string", "null"]},
         "f_aeronef":           {"type": ["string", "null"]},
         "f_service":           {"type": ["string", "null"]},
+        "f_societe":           {"type": ["string", "null"]},
+        "f_entite":            {"type": ["string", "null"]},
         "sort_by":             {"type": "string", "enum": ["date_creation", "date_evenement", "severite"]},
         "order":               {"type": "string", "enum": ["desc", "asc"]},
         "limit":               {"type": "integer", "minimum": 1, "maximum": 200},
@@ -782,6 +800,11 @@ _UNIFIED_SPEC_SCHEMA: dict = {
         "action_type":         {"type": ["string", "null"]},
         "action_statut":       {"type": ["string", "null"]},
         "shape":               {"type": "string", "enum": ["par_incident", "par_action"]},
+        "graph_pattern":       {"type": ["string", "null"]},
+        "graph_anchor":        {"type": ["string", "null"]},
+        "graph_via":           {"type": ["string", "null"]},
+        "graph_op":            {"type": "string", "enum": [">=", ">", "=", "<=", "<"]},
+        "graph_n":             {"type": "integer"},
     },
     "required": ["output"],
 }
@@ -802,6 +825,8 @@ _REL_DIMS: dict[str, tuple[str, str, str]] = {
     "phase_vol":      ("EN_PHASE_DE_VOL",    "PhaseVol",      "label"),
     "aeronef":        ("IMPLIQUE_AERONEF",   "TypeAeronef",   "label"),
     "service":        ("RESPONSABLE",        "Service",       "label"),
+    "societe":        ("CONCERNE",           "Societe",       "nom"),
+    "entite":         ("MIS_EN_CAUSE",       "Entite",        "nom"),
 }
 
 
@@ -1049,6 +1074,26 @@ def _postprocess_unified(spec: UnifiedQuerySpec, question: str) -> UnifiedQueryS
         else:
             spec.shape = "par_action"  # type: ignore[assignment]
 
+    # ─── Opérateur GRAPHE : filet DÉTERMINISTE (fige les cas nets, op/n exacts) +
+    # validation des champs graphe proposés par le LLM (qui généralise aux paraphrases).
+    import graph_query_incident_v2 as _gq  # import tardif : évite le cycle d'import
+    _g = _gq.detect_graph_fields(question)
+    if _g is not None:
+        spec.graph_pattern = _g.pattern  # type: ignore[assignment]
+        spec.graph_anchor = _g.anchor    # type: ignore[assignment]
+        spec.graph_via = _g.via          # type: ignore[assignment]
+        spec.graph_op = _g.op            # type: ignore[assignment]
+        spec.graph_n = _g.n
+        spec.graph_anchors_fe = list(_g.anchors_fe)
+        spec.output = _g.output          # type: ignore[assignment]  # le détecteur tranche count/liste
+    elif spec.graph_pattern:  # graphe proposé par le LLM (paraphrase) → valider le couple
+        _probe = _gq.GraphSpec(pattern=spec.graph_pattern,
+                               anchor=spec.graph_anchor or "incident",
+                               via=spec.graph_via or "action",
+                               op=spec.graph_op, n=spec.graph_n)
+        if _gq._satellite_of(_probe) is None:  # couple invalide → on abandonne (compte normal)
+            spec.graph_pattern = None  # type: ignore[assignment]
+
     return spec
 
 
@@ -1133,8 +1178,11 @@ def _build_action_par_action(
     return cypher, params
 
 
-def build_unified_cypher(spec: UnifiedQuerySpec, fields: list[str]) -> tuple[str, dict[str, Any]]:
-    """Compile une UnifiedQuerySpec en Cypher déterministe paramétré (READ-ONLY)."""
+def build_unified_cypher(spec: UnifiedQuerySpec, fields: list[str],
+                         window: Optional[int] = None) -> tuple[str, dict[str, Any]]:
+    """Compile une UnifiedQuerySpec en Cypher déterministe paramétré (READ-ONLY).
+    `window` (répartition seulement) = « les N derniers/récents … par X » : restreint
+    aux N incidents les plus récents AVANT de regrouper."""
     where: list[str] = ["coalesce(i.is_test_data, false) = false"]
     params: dict[str, Any] = {}
 
@@ -1206,10 +1254,17 @@ def build_unified_cypher(spec: UnifiedQuerySpec, fields: list[str]) -> tuple[str
     elif spec.output == "repartition":
         gb = spec.group_by or "severite"
         params["rlimit"] = 30
+        # Fenêtre « les N derniers … par X » : on restreint aux N incidents les plus
+        # récents (selon sort_by/order) AVANT de regrouper. Sinon la limite serait
+        # ignorée et la répartition porterait sur TOUS les incidents filtrés.
+        win = ""
+        if window:
+            params["window"] = int(window)
+            win = f" WITH DISTINCT i ORDER BY i.{spec.sort_by} {spec.order.upper()} LIMIT $window"
         if gb in ("annee", "mois"):
             n_char = 4 if gb == "annee" else 7
             cypher = (
-                f"{base} AND i.date_evenement IS NOT NULL "
+                f"{base} AND i.date_evenement IS NOT NULL{win} "
                 f"RETURN substring(i.date_evenement, 0, {n_char}) AS label, "
                 f"count(*) AS n ORDER BY n DESC LIMIT $rlimit"
             )
@@ -1217,13 +1272,13 @@ def build_unified_cypher(spec: UnifiedQuerySpec, fields: list[str]) -> tuple[str
             # Ventilation par satellite : traverse la relation puis regroupe
             rel, lbl, prop = _REL_DIMS[gb]
             cypher = (
-                f"{base} MATCH (i)-[:{rel}]->(grp:{lbl}) "
+                f"{base}{win} MATCH (i)-[:{rel}]->(grp:{lbl}) "
                 f"RETURN grp.{prop} AS label, count(DISTINCT i) AS n "
                 f"ORDER BY n DESC LIMIT $rlimit"
             )
         else:
             cypher = (
-                f"{base} AND i.`{gb}` IS NOT NULL "
+                f"{base} AND i.`{gb}` IS NOT NULL{win} "
                 f"RETURN i.`{gb}` AS label, count(*) AS n "
                 f"ORDER BY n DESC LIMIT $rlimit"
             )
@@ -1286,6 +1341,36 @@ def run_unified_query(
             "resultat_brut": None,
         }
 
+    # ── Opérateur GRAPHE (degré/seuil, voisin commun) : délégué au compilateur
+    # gouverné. Rempli par le LLM (paraphrases) et/ou le filet déterministe.
+    if getattr(spec, "graph_pattern", None):
+        import graph_query_incident_v2 as _gq
+        gspec = _gq.GraphSpec(
+            pattern=spec.graph_pattern,
+            anchor=spec.graph_anchor or "incident",
+            via=spec.graph_via or "action",
+            op=spec.graph_op, n=spec.graph_n,
+            output=("count" if spec.output == "count" else "liste"),
+            limit=spec.limit, anchors_fe=list(spec.graph_anchors_fe or []),
+            f_severite=spec.f_severite, f_classification=spec.f_classification,
+            f_annee=spec.f_annee, f_condition_lumineuse=spec.f_condition_lumineuse,
+            f_type_evenement=spec.f_type_evenement,
+        )
+        gres = _gq.execute_graph_spec(gspec, neo4j)
+        return {"status": "graph", "spec": spec, "spec_interpretee": spec.model_dump(),
+                "cypher_execute": gres.get("cypher_execute"),
+                "resultat_brut": gres.get("resultat_brut"), "graph": gres}
+
+    # ── Garde-fous déterministes sur f_condition_lumineuse (le 14b confond "jour") ──
+    # "du jour" / "de la journée" = RÉCENCE (date), PAS l'éclairage Jour/Nuit.
+    if getattr(spec, "f_condition_lumineuse", None) == "Jour" and \
+            re.search(r"\b(?:du jour|de la journ[ée]e?)\b", question, re.IGNORECASE) and \
+            not re.search(r"\b(?:de jour|en journ[ée]e?|diurne|plein jour)\b", question, re.IGNORECASE):
+        spec.f_condition_lumineuse = None
+    # Grouper PAR jour/nuit ET filtrer jour/nuit = un seul bucket → on lève le filtre.
+    if spec.group_by == "condition_lumineuse" and getattr(spec, "f_condition_lumineuse", None):
+        spec.f_condition_lumineuse = None
+
     if spec.output == "repartition" and not spec.group_by:
         return {
             "status": "besoin_precision",
@@ -1296,7 +1381,18 @@ def run_unified_query(
         }
 
     fields = _compute_unified_fields(question, spec)
-    cypher, params = build_unified_cypher(spec, fields)
+    # Fenêtre « les N derniers/récents … » pour une répartition (sinon la limite est
+    # ignorée). Garde-fou : on n'active PAS si le nombre porte sur une unité de temps
+    # (« 3 derniers mois » = plage, pas 3 incidents).
+    window = None
+    if spec.output == "repartition":
+        m = re.search(
+            r"\b(\d+)\s+(?:derni\w+|r[ée]cent\w*|premi\w+|ancien\w*)\b"
+            r"(?!\s+(?:mois|jours?|semaines?|ann[ée]es?|ans?|heures?|minutes?))",
+            question, re.IGNORECASE)
+        if m:
+            window = int(m.group(1))
+    cypher, params = build_unified_cypher(spec, fields, window=window)
     logger.info("UnifiedQuery Cypher: %s | params: %s", cypher, params)
 
     rows = neo4j.run_read(cypher, **params)

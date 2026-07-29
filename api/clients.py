@@ -13,7 +13,7 @@ import httpx
 from neo4j import GraphDatabase, Driver
 from qdrant_client import QdrantClient as _QdrantClient
 from qdrant_client.http.models import (
-    Distance, VectorParams, PointStruct, FieldCondition, Filter, MatchValue,
+    Distance, VectorParams, PointStruct, FieldCondition, Filter, MatchValue, MatchAny,
 )
 
 logger = logging.getLogger(__name__)
@@ -104,6 +104,7 @@ class QdrantWrapper:
         top_k: int = 5,
         exclude_test_data: bool = True,
         source_module: Optional[str] = None,
+        exclude_fields: Optional[list] = None,
     ) -> list[dict]:
         """Recherche les top_k chunks les plus similaires au vecteur fourni.
 
@@ -119,6 +120,9 @@ class QdrantWrapper:
             must_not.append(FieldCondition(key="is_test_data", match=MatchValue(value=True)))
         if source_module:
             must.append(FieldCondition(key="source_module", match=MatchValue(value=source_module)))
+        if exclude_fields:
+            # exclut certains champs du matching (ex. action/vérification pour la reco)
+            must_not.append(FieldCondition(key="field_canonical", match=MatchAny(any=list(exclude_fields))))
 
         query_filter = Filter(must=must, must_not=must_not) if (must or must_not) else None
 
@@ -142,6 +146,43 @@ class QdrantWrapper:
     def count_chunks(self) -> int:
         info = self._client.get_collection(INCIDENT_CHUNKS_COLLECTION)
         return info.points_count or 0
+
+    def scroll_all(
+        self,
+        source_module: Optional[str] = None,
+        exclude_test_data: bool = True,
+        batch: int = 512,
+    ) -> list[dict]:
+        """Parcourt TOUS les points (payload seul, sans vecteurs) d'un module.
+
+        Utilise : construction de l'index lexical BM25 en mémoire au démarrage.
+        Retourne [{chunk_id, payload}, ...]. Ne rapatrie pas les vecteurs
+        (with_vectors=False) — seul le texte du payload nous intéresse.
+        """
+        must: list = []
+        must_not: list = []
+        if exclude_test_data:
+            must_not.append(FieldCondition(key="is_test_data", match=MatchValue(value=True)))
+        if source_module:
+            must.append(FieldCondition(key="source_module", match=MatchValue(value=source_module)))
+        scroll_filter = Filter(must=must, must_not=must_not) if (must or must_not) else None
+
+        out: list[dict] = []
+        offset = None
+        while True:
+            points, offset = self._client.scroll(
+                collection_name=INCIDENT_CHUNKS_COLLECTION,
+                scroll_filter=scroll_filter,
+                with_payload=True,
+                with_vectors=False,
+                limit=batch,
+                offset=offset,
+            )
+            for p in points:
+                out.append({"chunk_id": p.id, "payload": p.payload})
+            if offset is None:
+                break
+        return out
 
 
 class OllamaClient:

@@ -1,0 +1,33 @@
+Tu convertis une question sur des incidents aéronautiques en une spécification JSON de GRAPHE. Tu ne calcules RIEN et n'écris JAMAIS de Cypher : tu mappes seulement la question vers les champs ci-dessous.
+
+Deux motifs seulement :
+
+1) pattern = "degree"  → « combien/lesquels ONT au moins N voisins d'un type »
+   - anchor = le nœud que l'on compte/liste (le SUJET de la question)
+   - via    = le type de voisin dont on compte le nombre par ancre
+   - op     = ">=" (au moins), ">" (plus de), "<=" (au plus), "<" (moins de), "=" (exactement)
+   - n      = le seuil (entier). « plusieurs » / « récurrent » / « reviennent » = ">=", n=2.
+   Exemples :
+     "Combien d'incidents ont au moins 2 actions ?"        → anchor=incident, via=action, op=">=", n=2, output=count
+     "Quels incidents ont plus de 3 actions ?"             → anchor=incident, via=action, op=">",  n=3, output=liste
+     "Quelles actions reviennent sur plusieurs incidents ?"→ anchor=action,   via=incident, op=">=", n=2, output=liste
+     "Compagnies impliquées dans au moins 10 incidents ?"  → anchor=compagnie, via=incident, op=">=", n=10, output=liste
+
+2) pattern = "shared"  → « qui PARTAGENT un même voisin » / « voisins COMMUNS »
+   - via    = le type de voisin partagé (souvent "action")
+   - anchor = "incident"
+   - anchors_fe = les références de fiche citées (ex : FNE/25/0497) si la question vise des incidents nommés
+   Exemples :
+     "Incidents qui partagent une même action ?"                       → pattern=shared, via=action, output=liste
+     "Actions communes à FNE/25/0497 et FNE/24/0112 ?"                 → pattern=shared, via=action, anchors_fe=["FNE/25/0497","FNE/24/0112"]
+
+RÈGLES :
+- anchor et via ∈ {incident, action, compagnie, type_evenement, lieu, phase_vol, aeronef, service, societe, entite}.
+- Exactement l'un des deux (anchor, via) DOIT être "incident" ; l'autre est un type de voisin.
+- output = "count" si la question demande un NOMBRE ("combien", "nombre de") ; "liste" sinon.
+- Filtres incident optionnels, uniquement si explicitement demandés (sinon null) :
+  f_severite ("1 - faible".."5 - intolérable"), f_classification ("Accident"/"Incident sérieux"),
+  f_annee (entier), f_condition_lumineuse ("Jour"/"Nuit"), f_type_evenement (mot-clé, ex "FOD").
+- N'invente aucun filtre. Dans le doute, laisse à null.
+
+Question : {question}

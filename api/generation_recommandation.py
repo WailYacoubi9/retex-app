@@ -6,6 +6,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
+import glossaire
 import prompt_store
 from clients import OllamaClient
 from recommendation_incident_v2 import RecommandationResult
@@ -33,11 +34,12 @@ class RecoGenResult:
 def _contexte(result: RecommandationResult) -> str:
     lignes = []
     for a in result.actions[:30]:
-        statut = f" | statut : {a.statut}" if a.statut else ""
-        lignes.append(
-            f"- [{a.type_action.upper()}] \"{a.titre}\" "
-            f"| fiches : {', '.join(a.fe_sources[:5])}{statut}"
-        )
+        n = len(a.fe_sources)
+        recur = f" (récurrente : {n} cas)" if n > 1 else ""
+        statut = f" [statut : {a.statut}]" if a.statut else ""
+        # PAS de codes de fiche ici : la prose ne doit jamais les citer
+        # (la liste des fiches sources est affichée séparément, sous la réponse).
+        lignes.append(f'- [{a.type_action.upper()}] "{a.titre}"{recur}{statut}')
     return "\n".join(lignes) if lignes else "Aucune action documentée sur ces incidents."
 
 
@@ -50,10 +52,9 @@ def phrase_recommendation(
         return RecoGenResult(answer=NO_MATCH_MESSAGE, model_used="deterministe")
 
     if not result.actions:
-        fes = ", ".join(i["numero_fe"] for i in result.incidents[:5])
         return RecoGenResult(
-            answer=(f"Des incidents similaires existent ({fes}) mais aucune action "
-                    f"n'y est documentée dans la base."),
+            answer=("Des cas similaires existent dans la base, mais aucune action n'y est "
+                    "documentée. La liste des fiches concernées est affichée ci-dessous."),
             model_used="deterministe",
         )
 
@@ -62,13 +63,16 @@ def phrase_recommendation(
         description=description,
         n_incidents=len(result.incidents),
         contexte=_contexte(result),
+        glossaire=glossaire.bloc_glossaire(),
     )
     try:
         answer = ollama.generate(prompt, model=LLM_MODEL)
         return RecoGenResult(answer=answer.strip(), model_used=LLM_MODEL)
     except Exception as e:
         logger.error("Génération recommandation échouée : %s", e)
-        lignes = [f"Actions relevées sur {len(result.incidents)} incidents similaires :"]
+        lignes = [f"Actions relevées sur {len(result.incidents)} cas similaires :"]
         for a in result.actions[:15]:
-            lignes.append(f"- [{a.type_action}] {a.titre} ({', '.join(a.fe_sources[:3])})")
+            n = len(a.fe_sources)
+            recur = f" (×{n} cas)" if n > 1 else ""
+            lignes.append(f"- [{a.type_action}] {a.titre}{recur}")
         return RecoGenResult(answer="\n".join(lignes), model_used="fallback")

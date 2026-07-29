@@ -26,6 +26,20 @@ RÈGLES :
   notée sur la fiche incident), false si elle demande les incidents SANS action à chaud,
   null si la question n'en parle pas.
 - limit : 20 par défaut.
+- graph_pattern : à remplir UNIQUEMENT si la question porte sur le NOMBRE d'incidents
+  liés à une action (seuil), ou sur des actions PARTAGÉES entre incidents. Sinon null.
+    "degree" → « actions liées à / sur / partagées par AU MOINS N incidents », « actions
+      RÉCURRENTES / qui reviennent / se retrouvent sur plusieurs fiches » :
+      graph_anchor="action", graph_via="incident", graph_op ∈ {">=",">","=","<=","<"},
+      graph_n = seuil (« plusieurs »/« récurrent » = ">=" 2).
+    "shared" → « incidents qui partagent une même action » : graph_anchor="incident", graph_via="action".
+  Exemples :
+    "les actions récurrentes" → graph_pattern="degree", graph_anchor="action", graph_via="incident", graph_op=">=", graph_n=2
+    "actions partagées par au moins 3 incidents" → graph_pattern="degree", graph_anchor="action", graph_via="incident", graph_op=">=", graph_n=3
+    "actions qui se retrouvent sur beaucoup de fiches différentes" → graph_pattern="degree", graph_anchor="action", graph_via="incident", graph_op=">=", graph_n=2
+  CONTRE-EXEMPLES — graph_pattern=null :
+    "Quelles actions correctives pour les incidents FOD" (filtre, pas un seuil)
+    "Actions en cours sur les incidents sérieux" · "Combien d'actions préventives clôturées en 2025"
 
 EXEMPLES SPÉCIFIQUES AU MODULE (issus du schéma) :
 {exemples_module}

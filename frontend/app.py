@@ -38,9 +38,9 @@ EX_V2_ACTIONS = [
     "Donne-moi les incidents avec des actions à chaud",
 ]
 EX_V2_QUERY = [
-    "Combien d'incidents avec des blessés ?",
+    "Répartition des incidents par phase de vol",
     "Les incidents de nuit en 2025",
-    "Répartition des incidents par compagnie",
+    "Répartition par compagnie des incidents sérieux",
     "Combien d'incidents impliquant easyjet en 2024 ?",
 ]
 EX_V2_LIST = [
@@ -374,6 +374,63 @@ def render_v2_stats() -> None:
         st.warning("Saisissez une question.")
 
 
+# ─── mode INCIDENTS v2 — SYNTHÈSE (préparation d'analyse) ────────────────────
+
+def render_v2_synthese() -> None:
+    st.caption("Décrivez un cas déclaré : l'assistant prépare un BROUILLON de dossier "
+               "(contexte + précédents + causes réelles observées + actions efficaces) que "
+               "vous validez. Il PRÉPARE l'analyse — il ne la fait pas.")
+    st.markdown("---")
+
+    question = _question_input(
+        "Ex : De l'équipement Avia est resté sous la passerelle avant le départ de l'avion",
+        "sv2syn")
+    _, col2 = st.columns([4, 1])
+    with col2:
+        submit = _submit_button("Préparer le dossier", "sv2syn")
+
+    if submit and question.strip():
+        with st.spinner("Précédents + contexte + causes + actions…"):
+            t0 = time.time()
+            resp = _post("/ask/incident-v2/synthese", {"question": question.strip()})
+            dur = time.time() - t0
+
+        if resp and resp.get("abstention"):
+            st.warning(resp.get("brouillon", "Aucun cas comparable dans la base."))
+        elif resp:
+            st.success(f"Dossier préparé en {dur:.0f}s")
+            st.markdown(f"**Type dominant :** {resp.get('type_dominant') or 'non déterminé'}")
+
+            ctx = resp.get("contexte") or {}
+            if ctx:
+                zones = ctx.get("zones") or []
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Cas de ce type", f"{ctx.get('total', 0):,}")
+                c2.metric("% graves", f"{ctx.get('pct_graves', 0)}%")
+                c3.metric("Zone principale", zones[0][0] if zones else "—")
+
+            fac = resp.get("facteurs") or {}
+            if fac.get("axes"):
+                st.markdown("**Orientation causale (7M) — où creuser :** "
+                            + " · ".join(f"{ax} ({n})" for ax, n in fac["axes"]))
+
+            causes = resp.get("causes") or []
+            if causes:
+                st.markdown("**Causes réelles déjà observées sur ce type :**")
+                for c in causes:
+                    st.markdown(f"- {c}")
+
+            st.markdown("### Brouillon d'analyse")
+            st.markdown(resp.get("brouillon", "") or "_(rédaction indisponible)_")
+
+            prec = resp.get("precedents") or []
+            if prec:
+                st.caption("Précédents : "
+                           + ", ".join(p.get("numero_fe", "?") for p in prec[:6]))
+    elif submit:
+        st.warning("Décrivez le cas déclaré.")
+
+
 # ─── mode INCIDENTS v2 — ENTITÉ ──────────────────────────────────────────────
 
 def render_v2_entity() -> None:
@@ -467,13 +524,13 @@ def render_v2_actions() -> None:
 # ─── mode INCIDENTS v2 — QUESTION LIBRE (moteur générique) ───────────────────
 
 def render_v2_query() -> None:
-    st.caption("Question libre sur N'IMPORTE QUEL champ de la fiche : propriétés, "
-               "dates, entités liées, présence/absence, comptages et répartitions. "
+    st.caption("Comptages, répartitions et listes de fiches sur N'IMPORTE QUEL champ "
+               "(sévérité, compagnie, lieu, phase, dates, entités liées, présence/absence…). "
                "Chiffres exacts garantis (Cypher déterministe).")
     _show_examples(EX_V2_QUERY, "sv2qry")
     st.markdown("---")
 
-    question = _question_input("Ex : Combien d'incidents avec des blessés ?", "sv2qry")
+    question = _question_input("Ex : Répartition par compagnie des incidents sérieux", "sv2qry")
     _, col2 = st.columns([4, 1])
     with col2:
         submit = _submit_button("Poser la question", "sv2qry")
@@ -548,18 +605,19 @@ def render_v2_reco() -> None:
                 st.markdown(f"### Recommandations\n{answer}")
 
             actions = resp.get("actions", [])
-            st.markdown("### Actions relevées sur les incidents similaires")
+            st.markdown("### Actions recommandées (relevées sur les cas similaires)")
             if actions:
                 icones = {"préventive": "🛡️", "corrective": "🔧",
                           "curative": "🚑", "à chaud": "⚡"}
                 for a in actions:
                     ic = icones.get(a.get("type_action", ""), "•")
+                    fes = a.get("fe_sources", [])
+                    n = len(fes)
+                    consensus = f" · **×{n} fiches**" if n > 1 else ""
                     statut = f" — {a['statut']}" if a.get("statut") else ""
-                    resp_a = ""  # responsable retiré (culture juste : jamais de personne)
                     st.markdown(
-                        f"{ic} **[{a.get('type_action', '?')}]** {a.get('titre', '?')}  \n"
-                        f"&nbsp;&nbsp;&nbsp;&nbsp;*Fiches : {', '.join(a.get('fe_sources', []))}"
-                        f"{statut}{resp_a}*"
+                        f"{ic} **[{a.get('type_action', '?')}]** {a.get('titre', '?')}{consensus}{statut}  \n"
+                        f"&nbsp;&nbsp;&nbsp;&nbsp;*fiches : {', '.join(fes[:6])}*"
                     )
             else:
                 st.info("Aucune action documentée sur ces incidents similaires "
@@ -569,19 +627,45 @@ def render_v2_reco() -> None:
 
             incidents = resp.get("incidents_similaires", [])
             if incidents:
-                with st.expander(f"Incidents similaires utilisés ({len(incidents)})",
+                _CHAMP_LBL = {"titre": "titre", "detail": "détail",
+                              "action_corrective": "action", "analyse_chaud": "analyse à chaud",
+                              "desc_cause_1": "cause", "desc_cause_3": "cause",
+                              "desc_cause_5": "cause", "detail_verification": "vérification",
+                              "resume_llm": "résumé"}
+
+                def _champs(it):
+                    labs = []
+                    for f in it.get("matched_fields", []):
+                        lbl = _CHAMP_LBL.get(f, f)
+                        if lbl not in labs:
+                            labs.append(lbl)
+                    return ", ".join(labs) or ("mot-clé" if it.get("lexical_only") else "—")
+
+                def _sem(it):
+                    if it.get("lexical_only") or not it.get("score"):
+                        return "lexical"
+                    return round(it.get("score"), 3)
+
+                ordre = sorted(incidents, key=lambda it: (it.get("rerank_score") or 0), reverse=True)
+                with st.expander(f"Fiches sources utilisées ({len(incidents)}) — scores & champs",
                                  expanded=not actions):
+                    st.caption("**Pertinence** = re-ranker (0-1, comparabilité réelle). "
+                               "**Sémantique** = similarité dense sur le champ matché ; "
+                               "« lexical » = fiche trouvée par mot-clé (pas de score dense).")
                     st.dataframe(
                         [
                             {
-                                "FE": i.get("numero_fe"),
-                                "Date": str(i.get("date_evenement") or "")[:10],
-                                "Sévérité": i.get("severite"),
-                                "Titre": i.get("titre"),
-                                "Score": i.get("score"),
-                                "Actions": i.get("n_actions", 0),
+                                "FE": it.get("numero_fe"),
+                                "Titre": it.get("titre"),
+                                "Description": it.get("description") or "",
+                                "Pertinence": it.get("rerank_score"),
+                                "Champ(s) matché(s)": _champs(it),
+                                "Sémantique": _sem(it),
+                                "Sévérité": it.get("severite"),
+                                "Date": str(it.get("date_evenement") or "")[:10],
+                                "Actions": it.get("n_actions", 0),
                             }
-                            for i in incidents
+                            for it in ordre
                         ],
                         use_container_width=True,
                         hide_index=True,
@@ -942,16 +1026,17 @@ def render_v2_auto() -> None:
 # ─── mode INCIDENTS v2 — ANALYSTE (couche agentique, accès direct) ───────────
 
 def render_v2_analyste() -> None:
-    st.caption("Accès DIRECT à la couche analyste (celle qui intercepte les questions "
-               "analytiques dans l'onglet Automatique) : plan fermé → opérateurs Cypher "
-               "déterministes → synthèse verrouillée sur les faits. Le dernier exemple "
-               "montre un REFUS volontaire (question non analytique → l'analyste décline).")
+    st.caption("Calculs de PROPORTIONS, TAUX et TENDANCES sur la population d'incidents — des "
+               "mesures DÉRIVÉES (ce que Statistiques & requêtes, qui ne fait que des comptes bruts, "
+               "ne peut pas faire). Plan fermé → opérateurs Cypher déterministes → synthèse verrouillée "
+               "sur les faits chiffrés. ⚠️ Ce n'est PAS l'analyse Safety d'un événement. Le dernier "
+               "exemple montre un REFUS volontaire (question non pertinente → la voie décline).")
     _show_examples(EX_V2_ANALYSTE, "sv2ana")
     st.markdown("---")
     question = _question_input("Ex : Quel lieu est proportionnellement le plus grave ?", "sv2ana")
     _, col2 = st.columns([4, 1])
     with col2:
-        submit = _submit_button("Analyser", "sv2ana")
+        submit = _submit_button("Calculer", "sv2ana")
     if submit and question.strip():
         with st.spinner("Plan + calculs + synthèse…"):
             t0 = time.time()
@@ -962,7 +1047,7 @@ def render_v2_analyste() -> None:
         st.success(f"Réponse en {dur:.0f}s")
         if resp.get("status") != "ok":
             st.warning(f"L'analyste DÉCLINE (statut : `{resp.get('status')}`) — la question "
-                       "suivrait sa voie normale dans l'onglet Automatique.")
+                       "suivrait sa voie normale dans l'onglet Assistant.")
             if resp.get("plan"):
                 st.json(resp["plan"])
             st.info(resp.get("answer", ""))
@@ -993,7 +1078,7 @@ def render_v2_analyste() -> None:
 _LIBELLES_GRILLE = {
     "couvrant": "🧱 Couvrant (32 Q, 5 voies)",
     "multihop": "🕸️ Multi-hop path-grounded (20 Q)",
-    "analyste": "🧮 Analyste — grille registre",
+    "analyste": "📈 Tendances & proportions — grille registre",
     "metier": "🎓 Métier curé main (50 Q en cours)",
     "culture_juste": "🛡️ Culture juste (pièges + zéro fuite)",
     "reco": "💡 Reco — hit@k retrieval",
@@ -1079,9 +1164,9 @@ def main() -> None:
 
     if mode == "Incidents Sécurité v2":
         onglets = st.tabs([
-            "🎯 Automatique", "🧭 Question libre", "💡 Recommandation", "🔍 Recherche sémantique",
-            "📊 Agrégation", "📋 Liste structurée", "🛠️ Actions", "🏢 Entités",
-            "🧮 Analyste", "🧪 Grilles",
+            "🤖 Assistant", "📊 Statistiques & requêtes", "💡 Recommandation", "🔍 Recherche sémantique",
+            "🛠️ Actions",
+            "📈 Tendances & proportions", "✨ Synthèse", "🧪 Grilles",
         ])
         with onglets[0]:
             render_v2_auto()
@@ -1092,16 +1177,12 @@ def main() -> None:
         with onglets[3]:
             render_v2_search()
         with onglets[4]:
-            render_v2_stats()
-        with onglets[5]:
-            render_v2_list()
-        with onglets[6]:
             render_v2_actions()
-        with onglets[7]:
-            render_v2_entity()
-        with onglets[8]:
+        with onglets[5]:
             render_v2_analyste()
-        with onglets[9]:
+        with onglets[6]:
+            render_v2_synthese()
+        with onglets[7]:
             render_v2_grilles()
 
     elif mode == "Tickets":

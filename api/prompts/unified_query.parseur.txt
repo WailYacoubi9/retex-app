@@ -21,7 +21,7 @@ CHAMP "output" — obligatoire
 CHAMP "group_by" — seulement si output="repartition", sinon null
 ────────────────────────────────────────────────────────────────────────
 Valeurs : "severite" | "classification" | "condition_lumineuse" | "annee" | "mois" | "etat"
-       | "compagnie" | "type_evenement" | "lieu" | "phase_vol" | "aeronef" | "service"
+       | "compagnie" | "type_evenement" | "lieu" | "phase_vol" | "aeronef" | "service" | "societe" | "entite"
 ⚠️  SUPERLATIF ("quelle compagnie a LE PLUS d'incidents ?", "le type le plus fréquent",
     "quelle phase revient le plus") → output="repartition" + group_by = la dimension concernée
     (compagnie / type_evenement / phase_vol …). La 1ʳᵉ ligne du résultat est la réponse.
@@ -39,9 +39,13 @@ f_classification : type de fiche
   ⚠️  "sérieux", "serious", "incident sérieux" → "Incident sérieux"
   ⚠️  "accident" → "Accident"
 
-f_condition_lumineuse : "Jour" | "Nuit"
-  "de nuit", "nocturne" → "Nuit"
-  "de jour", "diurne" → "Jour"
+f_condition_lumineuse : "Jour" | "Nuit"  — l'ÉCLAIRAGE au moment de l'événement (jour vs nuit)
+  "de nuit", "nocturne", "la nuit", "en pleine nuit" → "Nuit"
+  "de jour", "diurne", "en journée", "en plein jour" → "Jour"
+  ⚠️ NE PAS confondre avec la DATE : "du jour", "de la journée", "d'aujourd'hui",
+  "les récents", "les derniers", "du jour même" = récence/date → laisse f_condition_lumineuse=null
+  (gère-le par sort_by=date_creation + order=desc + limit). Ne mets "Jour" QUE si la question
+  oppose explicitement l'éclairage jour/nuit.
 
 f_traitement_termine : true | false | null
   "clôturé", "terminé", "fermé", "traitement terminé" → true
@@ -122,6 +126,8 @@ f_lieu           lieu                 "sur la piste"→"Piste" · "parkings avio
 f_phase_vol      phase de vol         "au décollage"→"Décollage" · "atterrissage"→"Atterrissage" · "stationnement"→"Stationnement"
 f_aeronef        type d'avion         "un A320"→"A320"
 f_service        service responsable  "responsabilité du SSLIA"→"SSLIA"
+f_societe        sous-traitant / prestataire cité  "sous-traitant Derichebourg"→"Derichebourg" · "Aviapartner"→"Aviapartner" · "société WFS"→"WFS"
+f_entite         entité mise en cause              "mis en cause : GIMAS"→"GIMAS"
 Ils se COMBINENT : "collisions aviaires impliquant Air France" → f_type_evenement="Collision aviaire" + f_compagnie="Air France".
 
 ────────────────────────────────────────────────────────────────────────
@@ -132,6 +138,9 @@ EXEMPLES
 
 "Les 5 derniers incidents par date de création"
 → {"output":"liste","limit":5,"sort_by":"date_creation","order":"desc","f_severite":null,"f_classification":null,"f_condition_lumineuse":null,"f_presence_blesses":null,"f_traitement_termine":null,"f_annee":null,"f_mois":null,"group_by":null,"is_hors_domaine":false}
+
+"les 5 derniers incidents du jour"   (⚠️ "du jour" = récents, PAS un filtre Jour/Nuit)
+→ {"output":"liste","limit":5,"sort_by":"date_creation","order":"desc","f_condition_lumineuse":null,"f_severite":null,"f_classification":null,"f_presence_blesses":null,"f_traitement_termine":null,"f_annee":null,"f_mois":null,"group_by":null,"is_hors_domaine":false}
 
 "affiche les trois dernières fiches graves"
 → {"output":"liste","limit":3,"sort_by":"date_evenement","order":"desc","f_severite":"4 - élevé","f_classification":null,"f_condition_lumineuse":null,"f_presence_blesses":null,"f_traitement_termine":null,"f_annee":null,"f_mois":null,"group_by":null,"is_hors_domaine":false}
@@ -165,6 +174,36 @@ EXEMPLES
 
 "Quelle compagnie a le plus d'incidents ?"
 → {"output":"repartition","group_by":"compagnie","is_hors_domaine":false}
+
+════════════════════════════════════════════════════════════════════════
+OPÉRATEUR DE GRAPHE — compter des VOISINS liés (seuil), ou des voisins COMMUNS.
+Utilise ces champs UNIQUEMENT si la question porte sur le NOMBRE d'entités liées à
+une autre, ou sur des entités PARTAGÉES. Sinon graph_pattern=null.
+
+- graph_pattern="degree" → « combien/quels X ont AU MOINS / PLUS DE / EXACTEMENT N Y »
+    graph_anchor = X (ce qu'on compte),  graph_via = Y (le voisin dénombré par X),
+    graph_op ∈ {">=",">","=","<=","<"},  graph_n = seuil (« plusieurs »/« récurrent »/« reviennent » = ">=" 2).
+    RÈGLE : l'un de {graph_anchor, graph_via} DOIT être "incident", l'autre un voisin
+    ("action","compagnie","type_evenement","lieu","phase_vol","aeronef","service","societe","entite").
+- graph_pattern="shared" → « X qui PARTAGENT un même Y » / « Y communs / partagés » :
+    graph_anchor="incident", graph_via="action".
+
+"Combien d'incidents ont au moins deux actions ?"
+→ {"output":"count","graph_pattern":"degree","graph_anchor":"incident","graph_via":"action","graph_op":">=","graph_n":2,"is_hors_domaine":false}
+"Quels incidents ont plus de 3 actions ?"
+→ {"output":"liste","graph_pattern":"degree","graph_anchor":"incident","graph_via":"action","graph_op":">","graph_n":3,"is_hors_domaine":false}
+"Quelles actions reviennent sur plusieurs incidents ?"
+→ {"output":"liste","graph_pattern":"degree","graph_anchor":"action","graph_via":"incident","graph_op":">=","graph_n":2,"is_hors_domaine":false}
+"Quelles actions se retrouvent sur beaucoup de fiches différentes ?"
+→ {"output":"liste","graph_pattern":"degree","graph_anchor":"action","graph_via":"incident","graph_op":">=","graph_n":2,"is_hors_domaine":false}
+"Combien de compagnies sont impliquées dans plus de 10 incidents ?"
+→ {"output":"count","graph_pattern":"degree","graph_anchor":"compagnie","graph_via":"incident","graph_op":">","graph_n":10,"is_hors_domaine":false}
+"Incidents qui partagent une même action ?"
+→ {"output":"liste","graph_pattern":"shared","graph_anchor":"incident","graph_via":"action","is_hors_domaine":false}
+
+CONTRE-EXEMPLES — graph_pattern DOIT rester null :
+"Combien d'incidents de nuit ?" → comptage simple (f_condition_lumineuse="Nuit").
+"Combien d'incidents en 2025 ?" → comptage simple. "Répartition par compagnie" → répartition.
 
 ────────────────────────────────────────────────────────────────────────
 Question : {question}

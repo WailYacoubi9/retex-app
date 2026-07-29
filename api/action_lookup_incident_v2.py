@@ -53,6 +53,18 @@ class ActionSpec(BaseModel):
     f_actions_efficaces: Optional[bool] = None   # jugement d'efficacité (niveau fiche)
     f_avec_action_chaud: Optional[bool] = None   # présence d'une action corrective immédiate (fiche)
     limit: int = Field(default=20, ge=1, le=50)
+    # ─── Opérateur de GRAPHE (aligné sur UnifiedQuerySpec) : « actions partagées
+    # par ≥N incidents », « actions récurrentes », etc. Compilé par graph_query. ───
+    graph_pattern: Optional[Literal["degree", "shared"]] = None
+    graph_anchor: Optional[Literal[
+        "incident", "action", "compagnie", "type_evenement", "lieu",
+        "phase_vol", "aeronef", "service", "societe", "entite"]] = None
+    graph_via: Optional[Literal[
+        "incident", "action", "compagnie", "type_evenement", "lieu",
+        "phase_vol", "aeronef", "service", "societe", "entite"]] = None
+    graph_op: Literal[">=", ">", "=", "<=", "<"] = ">="
+    graph_n: int = 2
+    graph_anchors_fe: list[str] = Field(default_factory=list)
 
 
 
@@ -102,6 +114,23 @@ def _postprocess_action_spec(spec: ActionSpec, question: str) -> ActionSpec:
             spec.f_annee_champ = "prevue"  # type: ignore[assignment]
         else:
             spec.f_annee_champ = "ajout"  # type: ignore[assignment]
+
+    # ─── Opérateur GRAPHE : filet DÉTERMINISTE + validation LLM (aligné sur /query) ───
+    import graph_query_incident_v2 as _gq  # import tardif : évite le cycle
+    _g = _gq.detect_graph_fields(question)
+    if _g is not None:
+        spec.graph_pattern = _g.pattern  # type: ignore[assignment]
+        spec.graph_anchor = _g.anchor    # type: ignore[assignment]
+        spec.graph_via = _g.via          # type: ignore[assignment]
+        spec.graph_op = _g.op            # type: ignore[assignment]
+        spec.graph_n = _g.n
+        spec.graph_anchors_fe = list(_g.anchors_fe)
+        spec.question_type = "count" if _g.output == "count" else "liste"  # type: ignore[assignment]
+    elif spec.graph_pattern:  # graphe proposé par le LLM (paraphrase) → valider le couple
+        _probe = _gq.GraphSpec(pattern=spec.graph_pattern, anchor=spec.graph_anchor or "incident",
+                               via=spec.graph_via or "action", op=spec.graph_op, n=spec.graph_n)
+        if _gq._satellite_of(_probe) is None:  # couple invalide → on abandonne
+            spec.graph_pattern = None  # type: ignore[assignment]
     return spec
 
 
@@ -280,6 +309,21 @@ def run_action_lookup(
     # évaporée »). Le champ f_responsable ne sert plus qu'à DÉTECTER la mention.
     if spec.f_responsable:
         return {"status": "refus_personne", "spec": spec, "rows": [], "total": None}
+
+    # ── Opérateur GRAPHE (aligné /query) : « actions récurrentes / partagées par ≥N
+    # incidents »… délégué au compilateur gouverné (généralise via le parseur LLM). ──
+    if getattr(spec, "graph_pattern", None):
+        import graph_query_incident_v2 as gq
+        gspec = gq.GraphSpec(
+            pattern=spec.graph_pattern, anchor=spec.graph_anchor or "incident",
+            via=spec.graph_via or "action", op=spec.graph_op, n=spec.graph_n,
+            output=("count" if spec.question_type == "count" else "liste"),
+            limit=spec.limit, anchors_fe=list(spec.graph_anchors_fe or []),
+            f_severite=spec.f_severite_incident,
+        )
+        gres = gq.execute_graph_spec(gspec, neo4j)
+        return {"status": "graph", "spec": spec, "graph": gres,
+                "rows": [], "total": gres.get("total")}
 
     # Forme incident-centrée pour l'action à chaud (sauf si des filtres
     # portant sur les nœuds Action imposent la forme relationnelle).

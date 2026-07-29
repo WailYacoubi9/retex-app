@@ -76,6 +76,7 @@ from generation_tickets import generate_answer_tickets
 from retrieval import retrieve
 from generation import build_sources, generate_answer
 from retrieval_incident_v2 import retrieve_incident_v2, MIN_SCORE
+import hybrid_retrieval
 from generation_incident_v2 import generate_answer_incident_v2
 from aggregation_incident_v2 import run_aggregation
 from generation_aggregation import phrase_result
@@ -86,6 +87,7 @@ from generation_action_lookup import phrase_action_result
 from structured_list_incident_v2 import run_list_query
 from generation_list_incident_v2 import phrase_list_result
 from query_engine_incident_v2 import run_query, run_unified_query
+import graph_query_incident_v2 as graph_query
 from generation_query import phrase_query_result, phrase_unified_result
 from field_catalog import champ_meta, champs_labellises
 from recommendation_incident_v2 import run_recommendation
@@ -241,6 +243,14 @@ async def lifespan(app: FastAPI):
 
     # Deny-list nominative (culture juste) : énumérée depuis le graphe au démarrage.
     confidentialite.charger(app.state.neo4j)
+
+    # Index lexical BM25 (retrieval hybride) : construit UNE FOIS au démarrage si
+    # activé. Coût nul si HYBRID_RETRIEVAL=0. Échec non bloquant → fallback dense.
+    if hybrid_retrieval.HYBRID_RETRIEVAL:
+        try:
+            hybrid_retrieval.build_index(app.state.qdrant)
+        except Exception as e:  # noqa: BLE001
+            logger.error("Index BM25 hybride non construit (fallback dense pur) : %s", e)
 
     logger.info("Connexions ouvertes, l'API est prete")
 
@@ -611,6 +621,31 @@ async def stats(request: Request) -> StatsResponse:
         )
 
 
+def _rerank_reorder(question: str, retrieval, reranker, keep: int = 8,
+                    seuil_abstention: float = 0.10) -> None:
+    """Ré-ordonne les incidents par pertinence cross-encoder (in place), garde le top
+    `keep`. Q&A : PAS de coupe agressive (on préserve la largeur du contexte). MAIS si
+    le MEILLEUR score reste très bas (question hors-domaine), on S'ABSTIENT — « vrai
+    négatif » : mieux vaut ne rien répondre que forcer des fiches sans rapport.
+    (calibré : hors-domaine top≈0.01, en-domaine top≥0.30)."""
+    items = retrieval.items
+    if not reranker or len(items) <= 1:
+        return
+    try:
+        docs = [((it.props.get("titre") or "") + ". "
+                 + (it.props.get("detail") or it.props.get("resume_llm") or ""))[:600]
+                for it in items]
+        scores = reranker.rerank(question, docs)
+        paires = sorted(zip(items, scores), key=lambda x: -x[1])
+        if paires and paires[0][1] < seuil_abstention:
+            retrieval.items = []            # hors-domaine → vrai négatif
+            retrieval.below_threshold = True
+            return
+        retrieval.items = [it for it, _ in paires][:keep]
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Rerank recherche sémantique indisponible (ordre conservé) : %s", e)
+
+
 # =====================================================================
 # ENDPOINT : POST /ask/incident-v2
 # =====================================================================
@@ -625,7 +660,11 @@ async def ask_incident_v2(request: Request, body: AskRequest) -> AskIncidentV2Re
             qdrant=request.app.state.qdrant,
             neo4j=request.app.state.neo4j,
             top_k=body.top_k,
+            hybrid=True,  # renfort : rappel lexical (BM25+RRF) si HYBRID_RETRIEVAL=1
         )
+        # Reranker en RÉ-ORDONNANCEMENT (top 8, sans abstention) : les plus pertinents
+        # en tête pour le contexte du LLM, sans sacrifier la largeur (cf. cas « laser »).
+        _rerank_reorder(body.question, retrieval, request.app.state.reranker, keep=8)
         generation = generate_answer_incident_v2(
             question=body.question,
             retrieval_result=retrieval,
@@ -768,13 +807,27 @@ async def ask_incident_v2_entity(request: AskRequest):
 
 @app.post("/ask/incident-v2/actions", response_model=ActionLookupResponse)
 async def ask_incident_v2_actions(request: Request, body: AskRequest) -> ActionLookupResponse:
-    """Questions sur les actions correctives et préventives liées aux incidents."""
+    """Questions sur les actions correctives et préventives liées aux incidents.
+    Le parseur actions peut aussi produire un OPÉRATEUR DE GRAPHE (« actions récurrentes »,
+    « partagées par ≥N incidents ») → statut "graph", mappé au schéma actions."""
     try:
         result = run_action_lookup(
             question=body.question,
             ollama=request.app.state.ollama,
             neo4j=request.app.state.neo4j,
         )
+
+        # ── Résultat d'un OPÉRATEUR DE GRAPHE mappé au schéma de la voie Actions ──
+        if result["status"] == "graph":
+            g = result["graph"]
+            if g["status"] == "besoin_precision":
+                return ActionLookupResponse(answer=g["explication"], rows=[])
+            return ActionLookupResponse(
+                answer=g["explication"],
+                rows=[ActionResult(**r) for r in graph_query.to_action_rows(g)],
+                total=g["total"],
+                filters_applied={"graphe": (g["spec_interpretee"] or {}).get("pattern")},
+            )
 
         if result["status"] == "refus_personne":
             return ActionLookupResponse(answer=confidentialite.REFUS_PERSONNE, rows=[])
@@ -835,7 +888,9 @@ async def ask_incident_v2_actions(request: Request, body: AskRequest) -> ActionL
 
 @app.post("/ask/incident-v2/query", response_model=GenericQueryResponse)
 async def ask_incident_v2_query(request: Request, body: AskRequest) -> GenericQueryResponse:
-    """Moteur unifié count/repartition/liste sur spec fermée — chiffres exacts garantis."""
+    """Moteur unifié count/repartition/liste sur spec fermée — chiffres exacts garantis.
+    Le parseur unifié peut aussi produire un OPÉRATEUR DE GRAPHE (degré/seuil, voisin
+    commun) → exécuté par graph_query ; le résultat revient avec le statut "graph"."""
     try:
         result = run_unified_query(
             question=body.question,
@@ -852,6 +907,17 @@ async def ask_incident_v2_query(request: Request, body: AskRequest) -> GenericQu
                     "une répartition ou une liste d'incidents."
                 ),
             )
+
+        # ── Résultat d'un OPÉRATEUR DE GRAPHE (phrase déterministe, chiffres exacts) ──
+        if result["status"] == "graph":
+            g = result["graph"]
+            if g["status"] == "besoin_precision":
+                return GenericQueryResponse(answer=g["explication"],
+                                            spec_interpretee=result.get("spec_interpretee"))
+            return GenericQueryResponse(
+                answer=g["explication"], intent=g["output"], rows=g["rows"],
+                total=g["total"], spec_interpretee=result["spec_interpretee"],
+                cypher_execute=g["cypher_execute"], resultat_brut=g["resultat_brut"])
 
         if result["status"] == "besoin_precision":
             return GenericQueryResponse(
@@ -967,9 +1033,13 @@ async def ask_incident_v2_synthese(request: Request, body: AskRequest):
         )
         return {
             "abstention": res.abstention,
+            "confiance": res.confiance,
             "type_dominant": res.type_dominant,
+            "type_distribution": res.type_distribution,
+            "note_type": res.note_type,
             "contexte": res.contexte,
             "facteurs": res.facteurs,
+            "causes": res.causes,
             "brouillon": res.brouillon,
             "precedents": res.precedents,
             "actions": [
