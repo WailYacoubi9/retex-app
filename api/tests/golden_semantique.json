@@ -1,0 +1,309 @@
+{
+  "meta": {
+    "titre": "Golden sémantique — questions par le SENS, fiches-cibles vérifiées à la main",
+    "version": "2026-07-16",
+    "regle": "Aucune question ne reprend les mots exacts de la fiche : on teste le SENS. fne_attendus = toute fiche de la liste compte comme succès (familles d'incidents jumeaux).",
+    "metriques": "recall@5 (fiche attendue dans le top 5) et MRR (rang de la première fiche attendue)",
+    "note_extension": "Étendu par build_golden_gaps.py : SEM11+ = requêtes paraphrasées, fne_attendus recalculés par terme distinctif dans la description (source)."
+  },
+  "questions": [
+    {
+      "id": "SEM01",
+      "question": "Un engin de chantier non balisé a-t-il déjà menacé les postes hélicoptères ?",
+      "fne_attendus": [
+        "FNE/24/0830"
+      ],
+      "champ_source": "detail"
+    },
+    {
+      "id": "SEM02",
+      "question": "Quelqu'un a-t-il déjà glissé sur du produit de dégivrage répandu au sol ?",
+      "fne_attendus": [
+        "FNE/26/0016"
+      ],
+      "champ_source": "detail"
+    },
+    {
+      "id": "SEM03",
+      "question": "Un agent a-t-il failli être aspiré par un réacteur en posant les cales ?",
+      "fne_attendus": [
+        "FNE/24/0879"
+      ],
+      "champ_source": "detail"
+    },
+    {
+      "id": "SEM04",
+      "question": "Un avion a-t-il dû se dérouter à cause d'une odeur suspecte dans le poste de pilotage ?",
+      "fne_attendus": [
+        "FNE/26/0015"
+      ],
+      "champ_source": "detail"
+    },
+    {
+      "id": "SEM05",
+      "question": "Un véhicule de piste a-t-il déjà coupé la route d'un avion qui roulait ?",
+      "fne_attendus": [
+        "FNE/25/0324",
+        "FNE/25/0211",
+        "FNE/26/0241",
+        "FNE/26/0236",
+        "FNE/26/0217"
+      ],
+      "champ_source": "detail"
+    },
+    {
+      "id": "SEM06",
+      "question": "Une camionnette est-elle passée derrière un avion pendant son repoussage ?",
+      "fne_attendus": [
+        "FNE/25/0211",
+        "FNE/26/0241"
+      ],
+      "champ_source": "detail"
+    },
+    {
+      "id": "SEM07",
+      "question": "Une personne à pied s'est-elle retrouvée près d'un avion moteurs tournants en pleine nuit ?",
+      "fne_attendus": [
+        "FNE/24/0051"
+      ],
+      "champ_source": "detail"
+    },
+    {
+      "id": "SEM08",
+      "question": "Un petit avion de tourisme est-il déjà sorti de la piste ?",
+      "fne_attendus": [
+        "FNE/26/0096"
+      ],
+      "champ_source": "detail"
+    },
+    {
+      "id": "SEM09",
+      "question": "Y a-t-il eu une réunion de suivi du programme de lutte contre les objets qui traînent sur les aires ?",
+      "fne_attendus": [
+        "CSA/26/0001"
+      ],
+      "champ_source": "detail"
+    },
+    {
+      "id": "SEM10",
+      "question": "Des contenants vides ont-ils déjà roulé librement sur une voie de circulation ?",
+      "fne_attendus": [
+        "FNE/18/0174"
+      ],
+      "champ_source": "detail"
+    },
+    {
+      "id": "SEM11",
+      "question": "Un aéronef télépiloté sans pilote a-t-il déjà survolé la zone aéroportuaire ?",
+      "fne_attendus": [
+        "FNE/25/1017",
+        "FNE/25/0933",
+        "FNE/25/0155",
+        "FNE/24/0949",
+        "FNE/23/0232",
+        "FNE/23/0072",
+        "FNE/21/0105",
+        "FNE/21/0103",
+        "FNE/20/0252",
+        "FNE/18/0196"
+      ],
+      "champ_source": "detail",
+      "terme_mine": "drone"
+    },
+    {
+      "id": "SEM12",
+      "question": "Un engin de mobilité individuelle abandonné a-t-il gêné les opérations ?",
+      "fne_attendus": [
+        "FNE/26/0228",
+        "FNE/26/0219",
+        "FNE/26/0029",
+        "FNE/25/0772",
+        "FNE/23/0173"
+      ],
+      "champ_source": "detail",
+      "terme_mine": "trottinette"
+    },
+    {
+      "id": "SEM13",
+      "question": "Un sanglier a-t-il déjà pénétré sur l'aire de manœuvre ?",
+      "fne_attendus": [
+        "FNE/22/0363"
+      ],
+      "champ_source": "detail",
+      "terme_mine": "sanglier"
+    },
+    {
+      "id": "SEM14",
+      "question": "Un impact de foudre a-t-il perturbé les installations ou un aéronef ?",
+      "fne_attendus": [
+        "FNE/25/0513",
+        "FNE/25/0302",
+        "FNE/24/0618",
+        "FNE/24/0468",
+        "FNE/24/0160",
+        "FNE/24/0130",
+        "FNE/23/0607",
+        "FNE/23/0161",
+        "FNE/22/0228",
+        "FNE/19/0206",
+        "FNE/19/0205",
+        "FNE/18/0265",
+        "FNE-2017ADL393",
+        "FNE-2017ADL391",
+        "FNE-2014ADL0250",
+        "FNE-2014ADL0181",
+        "FNE-2014ADL0182",
+        "FNE-2008ADL737"
+      ],
+      "champ_source": "detail",
+      "terme_mine": "foudre"
+    },
+    {
+      "id": "SEM15",
+      "question": "Un pilote a-t-il été ébloui par un faisceau lumineux depuis le sol ?",
+      "fne_attendus": [
+        "FNE/26/0239",
+        "FNE/25/0932",
+        "FNE/25/0536",
+        "FNE/24/0803",
+        "AFIS/22/0005",
+        "AFIS/22/0004",
+        "FNE/22/0134",
+        "FNE/22/0090",
+        "FNE/20/0140",
+        "FNE/18/0367",
+        "AFIS/18/0002",
+        "FNE-2012ADL0274"
+      ],
+      "champ_source": "detail",
+      "terme_mine": "laser"
+    },
+    {
+      "id": "SEM16",
+      "question": "Un petit mammifère de type goupil s'est-il introduit sur les pistes ?",
+      "fne_attendus": [
+        "FNE/25/0786",
+        "FNE/24/0613",
+        "FNE/24/0509",
+        "FNE/23/0803",
+        "FNE/20/0011",
+        "FNE-2017ADL471",
+        "FNE-2014ADL0177"
+      ],
+      "champ_source": "detail",
+      "terme_mine": "renard"
+    },
+    {
+      "id": "SEM17",
+      "question": "Un animal domestique a-t-il divagué sur les aires ?",
+      "fne_attendus": [
+        "FNE/25/0805",
+        "FNE/24/0542",
+        "FNE/24/0458",
+        "FNE/24/0237",
+        "FNE SURT/24/0021",
+        "FNE/23/0579",
+        "FNE/23/0416",
+        "FNE/21/0251",
+        "FNE/21/0072",
+        "FNE SURT/21/0002",
+        "FNE-2017ADL212",
+        "FNE-2016ADL176",
+        "FNE-2012ADL0196"
+      ],
+      "champ_source": "detail",
+      "terme_mine": "chien"
+    },
+    {
+      "id": "SEM18",
+      "question": "Un aérostat gonflé à l'air chaud est-il passé à proximité de l'aérodrome ?",
+      "fne_attendus": [
+        "FNE/24/0553"
+      ],
+      "champ_source": "detail",
+      "terme_mine": "montgolf"
+    },
+    {
+      "id": "SEM19",
+      "question": "Du produit de dégivrage a-t-il été retrouvé répandu côté piste ?",
+      "fne_attendus": [
+        "FNE/26/0055",
+        "FNE/26/0041",
+        "FNE/26/0040",
+        "FNE/26/0039",
+        "FNE/26/0019",
+        "FNE/26/0018",
+        "FNE/26/0017",
+        "FNE/26/0016",
+        "FNE/26/0006",
+        "FNE/25/1031",
+        "FNE/25/0196",
+        "FNE/24/0291",
+        "FNE/24/0012",
+        "FNE/24/0011",
+        "FNE/23/0788",
+        "FNE/23/0742",
+        "FNE/23/0043",
+        "FNE/22/0521",
+        "FNE/22/0123",
+        "FNE/22/0111",
+        "FNE/22/0064",
+        "FNE/22/0028",
+        "FNE/22/0026",
+        "FNE/22/0020",
+        "FNE/21/0405",
+        "FNE-2017ADL025",
+        "FNE-2016ADL307",
+        "FNE-2015ADL305",
+        "FNE-2015ADL282",
+        "FNE-2015ADL056",
+        "FNE-2014ADL0267",
+        "FNE-2009ADL0060",
+        "FNE-2009ADL0028"
+      ],
+      "champ_source": "detail",
+      "terme_mine": "glycol"
+    },
+    {
+      "id": "SEM20",
+      "question": "Un objet gonflable léger a-t-il dérivé dans l'espace aérien de l'aéroport ?",
+      "fne_attendus": [
+        "FNE/25/0791",
+        "FNE/25/0353",
+        "FNE/23/0254",
+        "FNE/22/0366",
+        "FNE/18/0237",
+        "FNE-2012ADL0311",
+        "FNE-2010ADL0088"
+      ],
+      "champ_source": "detail",
+      "terme_mine": "ballon"
+    },
+    {
+      "id": "SEM21",
+      "question": "Un pneumatique d'avion s'est-il dégonflé brutalement au sol ?",
+      "fne_attendus": [
+        "FNE/26/0206",
+        "FNE/26/0098",
+        "CSA/26/0001",
+        "FNE/26/0022",
+        "FNE/25/1009",
+        "FNE/25/0523",
+        "FNE/25/0503",
+        "FNE/25/0279",
+        "FNE/25/0169",
+        "FNE/24/0965",
+        "FNE/24/0763",
+        "FNE/24/0680",
+        "FNE/22/0044",
+        "FNE/21/0280",
+        "FNE/19/0117",
+        "FNE/19/0034",
+        "FNE/18/0245",
+        "FNE-2011ADL0134"
+      ],
+      "champ_source": "detail",
+      "terme_mine": "crevaison"
+    }
+  ]
+}

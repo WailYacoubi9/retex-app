@@ -1,0 +1,426 @@
+{
+ "meta": {
+  "titre": "Golden multi-hop path-grounded (SILVER)",
+  "n": 20,
+  "statut": "silver — à promouvoir en gold par revue"
+ },
+ "questions": [
+  {
+   "id": "SH1",
+   "question": "Quel type d'événement est le plus fréquent ?",
+   "type": "single-hop",
+   "n_hops": 1,
+   "entites_traversees": [
+    "TypeEvenement"
+   ],
+   "chemin_raisonnement": "incident → type, comptage, argmax",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false RETURN t.label AS ans, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1",
+   "resultat": {
+    "ans": "FOD",
+    "n": 1986
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "FOD"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "SH2",
+   "question": "Combien d'incidents impliquant EasyJet ?",
+   "type": "single-hop",
+   "n_hops": 1,
+   "entites_traversees": [
+    "Compagnie"
+   ],
+   "chemin_raisonnement": "incident → compagnie=EasyJet, comptage",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) WHERE coalesce(i.is_test_data,false)=false AND c.nom='EASYJET' RETURN count(DISTINCT i) AS ans",
+   "resultat": {
+    "ans": 587
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": 587
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "SH3",
+   "question": "Quelle phase de vol concentre le plus d'incidents ?",
+   "type": "single-hop",
+   "n_hops": 1,
+   "entites_traversees": [
+    "PhaseVol"
+   ],
+   "chemin_raisonnement": "incident → phase, argmax",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:EN_PHASE_DE_VOL]->(p:PhaseVol) WHERE coalesce(i.is_test_data,false)=false RETURN p.label AS ans, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1",
+   "resultat": {
+    "ans": "Stationnement",
+    "n": 788
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Stationnement"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "CO1",
+   "question": "Parmi les incidents graves, quelle phase de vol domine ?",
+   "type": "conditionnel",
+   "n_hops": 2,
+   "entites_traversees": [
+    "severite",
+    "PhaseVol"
+   ],
+   "chemin_raisonnement": "filtre gravité → phase → argmax",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:EN_PHASE_DE_VOL]->(p:PhaseVol) WHERE coalesce(i.is_test_data,false)=false AND i.severite IN ['4 - élevé','5 - intolérable'] RETURN p.label AS ans, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1",
+   "resultat": {
+    "ans": "Stationnement",
+    "n": 46
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Stationnement"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "CO2",
+   "question": "Parmi les incidents de nuit, quel type est le plus fréquent ?",
+   "type": "conditionnel",
+   "n_hops": 2,
+   "entites_traversees": [
+    "condition_lumineuse",
+    "TypeEvenement"
+   ],
+   "chemin_raisonnement": "filtre nuit → type → argmax",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false AND i.condition_lumineuse='Nuit' RETURN t.label AS ans, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1",
+   "resultat": {
+    "ans": "Autre, précisez :",
+    "n": 312
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Autre, précisez :"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "CO3",
+   "question": "Parmi les incidents avec blessés, quelle phase domine ?",
+   "type": "conditionnel",
+   "n_hops": 2,
+   "entites_traversees": [
+    "presence_blesses",
+    "PhaseVol"
+   ],
+   "chemin_raisonnement": "filtre blessés → phase → argmax",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:EN_PHASE_DE_VOL]->(p:PhaseVol) WHERE coalesce(i.is_test_data,false)=false AND i.presence_blesses=true RETURN p.label AS ans, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1",
+   "resultat": {
+    "ans": "Stationnement",
+    "n": 7
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Stationnement"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "MH1",
+   "question": "Quelle compagnie est la plus impliquée dans les collisions aviaires ?",
+   "type": "multi-hop",
+   "n_hops": 2,
+   "entites_traversees": [
+    "TypeEvenement",
+    "Compagnie"
+   ],
+   "chemin_raisonnement": "type=collision aviaire ∩ compagnie → argmax",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(:TypeEvenement {label:'Collision aviaire'}) MATCH (i)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) WHERE coalesce(i.is_test_data,false)=false RETURN c.nom AS ans, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1",
+   "resultat": {
+    "ans": "EASYJET",
+    "n": 162
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "EASYJET"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "MH2",
+   "question": "Sur quel lieu surviennent le plus les incidents au décollage ?",
+   "type": "multi-hop",
+   "n_hops": 2,
+   "entites_traversees": [
+    "PhaseVol",
+    "Lieu"
+   ],
+   "chemin_raisonnement": "phase=décollage ∩ lieu → argmax",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:EN_PHASE_DE_VOL]->(:PhaseVol {label:'Décollage'}) MATCH (i)-[:LOCALISE_EN]->(l:Lieu) WHERE coalesce(i.is_test_data,false)=false RETURN l.label AS ans, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1",
+   "resultat": {
+    "ans": "Piste",
+    "n": 294
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Piste"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "MH3",
+   "question": "Quel facteur contributif domine les quasi-collisions avion/véhicule ?",
+   "type": "multi-hop",
+   "n_hops": 2,
+   "entites_traversees": [
+    "TypeEvenement",
+    "FacteurContributif"
+   ],
+   "chemin_raisonnement": "type=quasi-collision véhicule ∩ facteur → argmax",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false AND t.label CONTAINS 'Quasi-collision' AND t.label CONTAINS 'véhicule' MATCH (i)-[:A_POUR_FACTEUR]->(f:FacteurContributif) RETURN f.label AS ans, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1",
+   "resultat": {
+    "ans": "priorite_non_cedee",
+    "n": 234
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "priorite_non_cedee"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "MH4",
+   "question": "Quel type d'aéronef est le plus impliqué dans les incidents graves ?",
+   "type": "multi-hop",
+   "n_hops": 2,
+   "entites_traversees": [
+    "severite",
+    "TypeAeronef"
+   ],
+   "chemin_raisonnement": "filtre gravité ∩ aéronef → argmax",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:IMPLIQUE_AERONEF]->(a:TypeAeronef) WHERE coalesce(i.is_test_data,false)=false AND i.severite IN ['4 - élevé','5 - intolérable'] RETURN a.label AS ans, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1",
+   "resultat": {
+    "ans": "A320 / 320",
+    "n": 33
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "A320 / 320"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "HD1",
+   "question": "Pour les incidents graves au roulage, quel facteur contributif domine ?",
+   "type": "multi-hop-difficile",
+   "n_hops": 3,
+   "entites_traversees": [
+    "severite",
+    "PhaseVol",
+    "FacteurContributif"
+   ],
+   "chemin_raisonnement": "gravité ∩ phase=roulage ∩ facteur → argmax",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:EN_PHASE_DE_VOL]->(:PhaseVol {label:'Roulage'}) WHERE coalesce(i.is_test_data,false)=false AND i.severite IN ['4 - élevé','5 - intolérable'] MATCH (i)-[:A_POUR_FACTEUR]->(f:FacteurContributif) RETURN f.label AS ans, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1",
+   "resultat": {
+    "ans": "priorite_non_cedee",
+    "n": 4
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "priorite_non_cedee"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "HD2",
+   "question": "Quelle compagnie a le plus de collisions aviaires survenues la nuit ?",
+   "type": "multi-hop-difficile",
+   "n_hops": 3,
+   "entites_traversees": [
+    "TypeEvenement",
+    "condition_lumineuse",
+    "Compagnie"
+   ],
+   "chemin_raisonnement": "type=aviaire ∩ nuit ∩ compagnie → argmax",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(:TypeEvenement {label:'Collision aviaire'}) WHERE coalesce(i.is_test_data,false)=false AND i.condition_lumineuse='Nuit' MATCH (i)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) RETURN c.nom AS ans, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1",
+   "resultat": {
+    "ans": "EASYJET",
+    "n": 12
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "EASYJET"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "HD3",
+   "question": "Pour les incursions de piste, quel facteur contributif est le plus fréquent ?",
+   "type": "multi-hop-difficile",
+   "n_hops": 2,
+   "entites_traversees": [
+    "TypeEvenement",
+    "FacteurContributif"
+   ],
+   "chemin_raisonnement": "type=incursion ∩ facteur → argmax",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(:TypeEvenement {label:'Incursion sur piste ou voie de circulation'}) MATCH (i)-[:A_POUR_FACTEUR]->(f:FacteurContributif) WHERE coalesce(i.is_test_data,false)=false RETURN f.label AS ans, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1",
+   "resultat": {
+    "ans": "non_conformite",
+    "n": 27
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "non_conformite"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "HD4",
+   "question": "Parmi les incidents avec défaut de communication, quel type d'événement domine ?",
+   "type": "multi-hop-difficile",
+   "n_hops": 2,
+   "entites_traversees": [
+    "FacteurContributif",
+    "TypeEvenement"
+   ],
+   "chemin_raisonnement": "facteur=communication ∩ type → argmax",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:A_POUR_FACTEUR]->(:FacteurContributif {label:'defaut_communication'}) MATCH (i)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false RETURN t.label AS ans, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1",
+   "resultat": {
+    "ans": "Repoussage ou tractage non conformes",
+    "n": 11
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Repoussage ou tractage non conformes"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "HD5",
+   "question": "Quel service est responsable du plus grand nombre d'incidents graves ?",
+   "type": "multi-hop-difficile",
+   "n_hops": 2,
+   "entites_traversees": [
+    "severite",
+    "Service"
+   ],
+   "chemin_raisonnement": "gravité ∩ service responsable → argmax",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:RESPONSABLE]->(s:Service) WHERE coalesce(i.is_test_data,false)=false AND i.severite IN ['4 - élevé','5 - intolérable'] RETURN s.label AS ans, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1",
+   "resultat": {
+    "ans": "Infra aéro",
+    "n": 2
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Infra aéro"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "CF1",
+   "question": "Si on excluait les FOD et les collisions aviaires (aléas), quel type serait le plus fréquent ?",
+   "type": "contrefactuel",
+   "n_hops": 1,
+   "entites_traversees": [
+    "TypeEvenement"
+   ],
+   "chemin_raisonnement": "type ∉ {FOD, Collision aviaire} → argmax",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false AND NOT t.label IN ['FOD','Collision aviaire','Collision animale'] RETURN t.label AS ans, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1",
+   "resultat": {
+    "ans": "Autre, précisez :",
+    "n": 1900
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Autre, précisez :"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "CF2",
+   "question": "En ne gardant que les incidents graves, quel lieu domine ?",
+   "type": "contrefactuel",
+   "n_hops": 2,
+   "entites_traversees": [
+    "severite",
+    "Lieu"
+   ],
+   "chemin_raisonnement": "gravité ∩ lieu → argmax (à comparer au lieu dominant global = Piste)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:LOCALISE_EN]->(l:Lieu) WHERE coalesce(i.is_test_data,false)=false AND i.severite IN ['4 - élevé','5 - intolérable'] RETURN l.label AS ans, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1",
+   "resultat": {
+    "ans": "Parking avions",
+    "n": 73
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Parking avions"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "OU1",
+   "question": "Quel facteur contributif est le plus dangereux (plus forte part d'incidents graves) ?",
+   "type": "ouvert",
+   "n_hops": 2,
+   "entites_traversees": [
+    "FacteurContributif",
+    "severite"
+   ],
+   "chemin_raisonnement": "par facteur : part de graves → argmax du taux (seuil n≥30)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:A_POUR_FACTEUR]->(f:FacteurContributif) WITH f.label AS fac, count(DISTINCT i) AS n, count(DISTINCT CASE WHEN i.severite IN ['4 - élevé','5 - intolérable'] THEN i END) AS g WHERE n>=30 RETURN fac AS ans, 100.0*g/n AS pct ORDER BY pct DESC LIMIT 1",
+   "resultat": {
+    "ans": "defaut_communication",
+    "pct": 14.583333333333334
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "defaut_communication"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "OU2",
+   "question": "Quel type d'événement a la plus forte proportion d'incidents graves ?",
+   "type": "ouvert",
+   "n_hops": 2,
+   "entites_traversees": [
+    "TypeEvenement",
+    "severite"
+   ],
+   "chemin_raisonnement": "par type : part de graves → argmax du taux (seuil n≥50)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WITH t.label AS typ, count(DISTINCT i) AS n, count(DISTINCT CASE WHEN i.severite IN ['4 - élevé','5 - intolérable'] THEN i END) AS g WHERE n>=50 RETURN typ AS ans, 100.0*g/n AS pct ORDER BY pct DESC LIMIT 1",
+   "resultat": {
+    "ans": "Incursion sur piste ou voie de circulation",
+    "pct": 28.767123287671232
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Incursion sur piste ou voie de circulation"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "OU3",
+   "question": "Quelle phase de vol est proportionnellement la plus grave ?",
+   "type": "ouvert",
+   "n_hops": 2,
+   "entites_traversees": [
+    "PhaseVol",
+    "severite"
+   ],
+   "chemin_raisonnement": "par phase : part de graves → argmax du taux",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:EN_PHASE_DE_VOL]->(p:PhaseVol) WITH p.label AS ph, count(DISTINCT i) AS n, count(DISTINCT CASE WHEN i.severite IN ['4 - élevé','5 - intolérable'] THEN i END) AS g WHERE n>=50 RETURN ph AS ans, 100.0*g/n AS pct ORDER BY pct DESC LIMIT 1",
+   "resultat": {
+    "ans": "Roulage",
+    "pct": 8.305647840531561
+   },
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Roulage"
+   },
+   "statut": "silver"
+  }
+ ]
+}

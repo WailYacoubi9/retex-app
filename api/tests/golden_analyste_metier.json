@@ -1,0 +1,2572 @@
+{
+ "meta": {
+  "nom": "golden_analyste_metier",
+  "description": "80 questions métier de profondeur pour la voie analyse — écrites À LA MAIN à partir des phénomènes réels des données, vérité terrain exécutée contre Neo4j. Jurisprudence validée (2026-07-23) : quand le bucket résiduel « Autre, précisez : » arrive en tête, l'attendu est de citer les DEUX premières valeurs ET de signaler le résiduel de saisie. Les questions hors périmètre actuel (argmax imbriqué, exclusion, durées) sont conservées : elles tracent la frontière.",
+  "voie": "analyse",
+  "source": "cure_main",
+  "protocole": "silver->gold : vérité exécutée + revue humaine (batch 1 validé 2026-07-23)",
+  "date": "2026-07-23"
+ },
+ "questions": [
+  {
+   "id": "M01",
+   "question": "Quel type d'événement est rare mais disproportionnément grave ?",
+   "type": "single-hop-profond",
+   "operateur": "proportion",
+   "entites_traversees": [
+    "TypeEvenement"
+   ],
+   "n_hops": 1,
+   "phenomene": "risque ≠ fréquence : les incursions sont 27× moins nombreuses que les FOD mais ~29% finissent graves",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false WITH t.label AS val, count(DISTINCT i) AS n, count(DISTINCT CASE WHEN i.severite IN ['4 - élevé','5 - intolérable'] THEN i END) AS g WHERE n >= 30 RETURN val, n, g, round(100.0*g/n,1) AS pct ORDER BY pct DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "Incursion sur piste ou voie de circulation",
+     "n": 73,
+     "g": 21,
+     "pct": 28.8
+    },
+    {
+     "val": "Collision impliquant un aéronef avec un véhicule ou un piéton",
+     "n": 108,
+     "g": 15,
+     "pct": 13.9
+    },
+    {
+     "val": "Quasi-collision impliquant un aéronef avec un autre aéronef",
+     "n": 62,
+     "g": 8,
+     "pct": 12.9
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Incursion sur piste ou voie de circulation",
+    "chiffre_appui": "28.8"
+   },
+   "statut": "gold"
+  },
+  {
+   "id": "M02",
+   "question": "Parmi les incidents survenus de nuit, quel lieu concentre le plus d'incidents graves ?",
+   "type": "conditionnel",
+   "operateur": "frequence+conditions",
+   "entites_traversees": [
+    "condition_lumineuse",
+    "gravite",
+    "Lieu"
+   ],
+   "n_hops": 2,
+   "phenomene": "le risque nocturne grave se concentre sur l'apron, pas la piste",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:LOCALISE_EN]->(l:Lieu) WHERE coalesce(i.is_test_data,false)=false AND i.condition_lumineuse='Nuit' AND i.severite IN ['4 - élevé','5 - intolérable'] RETURN l.label AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "Parking avions",
+     "n": 17
+    },
+    {
+     "val": "Piste",
+     "n": 9
+    },
+    {
+     "val": "Aire de trafic",
+     "n": 8
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Parking avions",
+    "chiffre_appui": "17"
+   },
+   "statut": "gold"
+  },
+  {
+   "id": "M03",
+   "question": "Quel facteur contributif pèse le plus dans les quasi-collisions ?",
+   "type": "multi-hop-causal",
+   "operateur": "frequence+conditions",
+   "entites_traversees": [
+    "TypeEvenement",
+    "FacteurContributif"
+   ],
+   "n_hops": 2,
+   "phenomene": "les quasi-collisions sont un problème de priorité non cédée, pas de matériel",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false AND toLower(t.label) CONTAINS 'quasi-collision' MATCH (i)-[:A_POUR_FACTEUR]->(f:FacteurContributif) RETURN f.label AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "priorite_non_cedee",
+     "n": 235
+    },
+    {
+     "val": "non_conformite",
+     "n": 80
+    },
+    {
+     "val": "stress_pression",
+     "n": 10
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "priorite_non_cedee",
+    "chiffre_appui": "235"
+   },
+   "statut": "gold"
+  },
+  {
+   "id": "M04",
+   "question": "Chez la compagnie la plus impliquée dans les incidents, quel type d'événement revient le plus ?",
+   "type": "multi-hop-difficile",
+   "operateur": "argmax_imbrique (HORS PÉRIMÈTRE ACTUEL — frontière)",
+   "entites_traversees": [
+    "Compagnie",
+    "TypeEvenement"
+   ],
+   "n_hops": 3,
+   "phenomene": "argmax à deux étages : trouver EASYJET puis son profil de risque",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) WHERE coalesce(i.is_test_data,false)=false WITH c, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1 MATCH (i2:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c) WHERE coalesce(i2.is_test_data,false)=false MATCH (i2)-[:DE_TYPE]->(t:TypeEvenement) RETURN c.nom AS compagnie, t.label AS val, count(DISTINCT i2) AS m ORDER BY m DESC LIMIT 3",
+   "resultat": [
+    {
+     "compagnie": "EASYJET",
+     "val": "Autre, précisez :",
+     "m": 200
+    },
+    {
+     "compagnie": "EASYJET",
+     "val": "Collision aviaire",
+     "m": 162
+    },
+    {
+     "compagnie": "EASYJET",
+     "val": "Quasi-collision impliquant un aéronef avec un véhicule ou un piéton",
+     "m": 76
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "EASYJET",
+     "Autre, précisez :",
+     "Collision aviaire"
+    ],
+    "exigence": "citer les deux premières valeurs ET signaler que « Autre, précisez : » est un résiduel de saisie"
+   },
+   "statut": "gold"
+  },
+  {
+   "id": "M05",
+   "question": "Hors aléas naturels (FOD, collisions aviaires et animales), quel type d'événement domine parmi les incidents graves ?",
+   "type": "contrefactuel",
+   "operateur": "exclusion (HORS PÉRIMÈTRE ACTUEL — frontière)",
+   "entites_traversees": [
+    "TypeEvenement",
+    "gravite"
+   ],
+   "n_hops": 2,
+   "phenomene": "une fois les aléas retirés, le risque grave restant est opérationnel (quasi-collisions, incursions)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false AND i.severite IN ['4 - élevé','5 - intolérable'] AND NOT t.label IN ['FOD','Collision aviaire','Collision animale'] RETURN t.label AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "Autre, précisez :",
+     "n": 46
+    },
+    {
+     "val": "Quasi-collision impliquant un aéronef avec un véhicule ou un piéton",
+     "n": 30
+    },
+    {
+     "val": "Incursion sur piste ou voie de circulation",
+     "n": 21
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "Autre, précisez :",
+     "Quasi-collision"
+    ],
+    "exigence": "citer les deux premières valeurs ET signaler que « Autre, précisez : » est un résiduel de saisie"
+   },
+   "statut": "gold"
+  },
+  {
+   "id": "M06",
+   "question": "Les incursions de piste sont-elles en train d'augmenter ces dernières années ?",
+   "type": "tendance",
+   "operateur": "tendance+filtre_type",
+   "entites_traversees": [
+    "TypeEvenement",
+    "date_evenement"
+   ],
+   "n_hops": 1,
+   "phenomene": "signal faible en hausse : 2-4/an historique → 5 (2022), 10 (2023)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false AND toLower(t.label) CONTAINS 'incursion' AND i.date_evenement IS NOT NULL RETURN substring(i.date_evenement,0,4) AS annee, count(DISTINCT i) AS n ORDER BY annee",
+   "resultat_resume": "2008-2019 : 1 à 6/an ; 2022 : 5 ; 2023 : 10 — direction HAUSSE",
+   "verite_terrain": {
+    "eval": "direction",
+    "attendu": "hausse"
+   },
+   "statut": "gold"
+  },
+  {
+   "id": "M07",
+   "question": "À quelle période de l'année le péril animalier est-il le plus critique ?",
+   "type": "saisonnalite",
+   "operateur": "tendance granularite=mois",
+   "entites_traversees": [
+    "TypeEvenement",
+    "date_evenement"
+   ],
+   "n_hops": 1,
+   "phenomene": "pic estival net du péril animalier (aviaire + animale)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false AND (toLower(t.label) CONTAINS 'aviaire' OR toLower(t.label) CONTAINS 'animale') AND i.date_evenement IS NOT NULL RETURN substring(i.date_evenement,5,2) AS mois, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "mois": "07",
+     "n": 387
+    },
+    {
+     "mois": "08",
+     "n": 357
+    },
+    {
+     "mois": "09",
+     "n": 243
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "juillet",
+    "chiffre_appui": "387"
+   },
+   "statut": "gold"
+  },
+  {
+   "id": "M08",
+   "question": "La nuit est-elle réellement plus dangereuse que le jour, à volume égal ?",
+   "type": "proportion-normalisee",
+   "operateur": "proportion",
+   "entites_traversees": [
+    "condition_lumineuse",
+    "gravite"
+   ],
+   "n_hops": 1,
+   "phenomene": "normalisation : 4× moins d'incidents la nuit mais un taux de gravité 1,5× supérieur",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.condition_lumineuse IN ['Nuit','Jour'] WITH i.condition_lumineuse AS val, count(DISTINCT i) AS n, count(DISTINCT CASE WHEN i.severite IN ['4 - élevé','5 - intolérable'] THEN i END) AS g RETURN val, n, g, round(100.0*g/n,1) AS pct ORDER BY pct DESC",
+   "resultat": [
+    {
+     "val": "Nuit",
+     "n": 886,
+     "g": 46,
+     "pct": 5.2
+    },
+    {
+     "val": "Jour",
+     "n": 3439,
+     "g": 120,
+     "pct": 3.5
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "5.2",
+     "3.5"
+    ],
+    "exigence": "répondre OUI en proportion, avec les deux taux"
+   },
+   "statut": "gold"
+  },
+  {
+   "id": "M09",
+   "question": "Quelle combinaison type d'événement, lieu et phase constitue la signature de risque la plus fréquente sur les incidents graves ?",
+   "type": "cooccurrence",
+   "operateur": "cooccurrence 3D + cible gravite",
+   "entites_traversees": [
+    "TypeEvenement",
+    "Lieu",
+    "PhaseVol"
+   ],
+   "n_hops": 3,
+   "phenomene": "la signature de risque grave n°1 : collision aéronef-véhicule au parking en stationnement",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) MATCH (i)-[:LOCALISE_EN]->(l:Lieu) MATCH (i)-[:EN_PHASE_DE_VOL]->(p:PhaseVol) WHERE coalesce(i.is_test_data,false)=false AND i.severite IN ['4 - élevé','5 - intolérable'] RETURN t.label AS typ, l.label AS lieu, p.label AS phase, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "typ": "Collision impliquant un aéronef avec un véhicule ou un piéton",
+     "lieu": "Parking avions",
+     "phase": "Stationnement",
+     "n": 13
+    },
+    {
+     "typ": "Autre, précisez :",
+     "lieu": "Parking avions",
+     "phase": "Stationnement",
+     "n": 10
+    },
+    {
+     "typ": "Quasi-collision impliquant un aéronef avec un véhicule ou un piéton",
+     "lieu": "Aire de trafic",
+     "phase": "Roulage",
+     "n": 8
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "Parking avions",
+     "Stationnement"
+    ],
+    "chiffre_appui": "13"
+   },
+   "statut": "gold"
+  },
+  {
+   "id": "M10",
+   "question": "Que révèlent les incidents intolérables ?",
+   "type": "ouvert",
+   "operateur": "synthese filtre_severite",
+   "entites_traversees": [
+    "gravite",
+    "TypeEvenement"
+   ],
+   "n_hops": 1,
+   "phenomene": "22 intolérables en 18 ans — population minuscule mais la plus critique",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.severite = '5 - intolérable' OPTIONAL MATCH (i)-[:DE_TYPE]->(t:TypeEvenement) RETURN count(DISTINCT i) AS total, collect(DISTINCT t.label)[..5] AS types",
+   "resultat": [
+    {
+     "total": 22,
+     "types": [
+      "Présence indésirable sur une aire",
+      "Incursion sur piste ou voie de circulation",
+      "Autre, précisez :",
+      "Problème avitaillement",
+      "Quasi-collision impliquant un aéronef avec un autre aéronef"
+     ]
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention+jugeable",
+    "attendu": "22",
+    "exigence": "citer le total exact et des thèmes cohérents avec les types listés ; jugeable par triplet"
+   },
+   "statut": "gold"
+  },
+  {
+   "id": "M11",
+   "question": "Les actions issues des incidents graves sont-elles clôturées plus vite que les autres ?",
+   "type": "multi-hop-difficile",
+   "operateur": "duree_comparee (HORS PÉRIMÈTRE ACTUEL — frontière)",
+   "entites_traversees": [
+    "gravite",
+    "Action",
+    "durees"
+   ],
+   "n_hops": 2,
+   "phenomene": "CONTRE-INTUITIF : les actions des graves prennent 2,5× PLUS longtemps (100 j vs 40 j en moyenne) — actions lourdes vs corrections à chaud (médianes 1 j vs 0 j)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i.is_test_data,false)=false AND a.date_ajout IS NOT NULL AND a.date_cloture IS NOT NULL WITH CASE WHEN i.severite IN ['4 - élevé','5 - intolérable'] THEN 'grave' ELSE 'autre' END AS pop, duration.inDays(date(substring(a.date_ajout,0,10)), date(substring(a.date_cloture,0,10))).days AS d WHERE d >= 0 RETURN pop, count(*) AS n, round(avg(d),0) AS jours_moyens, percentileCont(d,0.5) AS mediane ORDER BY pop",
+   "resultat": [
+    {
+     "pop": "autre",
+     "n": 1108,
+     "jours_moyens": 40.0,
+     "mediane": 0.0
+    },
+    {
+     "pop": "grave",
+     "n": 139,
+     "jours_moyens": 100.0,
+     "mediane": 1
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "100",
+     "40"
+    ],
+    "exigence": "répondre NON (plus lentement) avec les deux durées"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M12",
+   "question": "Les actions encore ouvertes sont-elles plutôt correctives ou préventives ?",
+   "type": "comparatif",
+   "operateur": "frequence entite=action + filtre statut",
+   "entites_traversees": [
+    "Action",
+    "type_action",
+    "statut"
+   ],
+   "n_hops": 1,
+   "phenomene": "le stock ouvert est aux 3/4 correctif (33 vs 9)",
+   "note_conception": "REMPLACE une v1 qui classait les porteurs individuels (logins nominatifs) — écartée par culture juste ; le classement de personnes est interdit dans ce golden",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND NOT (a.statut='100' OR a.date_cloture IS NOT NULL) RETURN r.type_action AS val, count(DISTINCT a) AS n ORDER BY n DESC",
+   "resultat": [
+    {
+     "val": "corrective",
+     "n": 33
+    },
+    {
+     "val": "préventive",
+     "n": 9
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "corrective",
+     "33"
+    ]
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M13",
+   "question": "Quels types d'incidents graves restent le plus souvent sans action corrective ?",
+   "type": "conditionnel",
+   "operateur": "proportion cible=avec_action sens=bas + condition gravite",
+   "entites_traversees": [
+    "gravite",
+    "TypeEvenement",
+    "Action"
+   ],
+   "n_hops": 2,
+   "phenomene": "trou de couverture : 46,7 % des quasi-collisions véhicule GRAVES n'ont aucune action tracée",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false AND i.severite IN ['4 - élevé','5 - intolérable'] WITH t.label AS val, count(DISTINCT i) AS n, count(DISTINCT CASE WHEN NOT EXISTS { (i)-[:A_POUR_ACTION]->() } THEN i END) AS sans WHERE n >= 10 RETURN val, n, sans, round(100.0*sans/n,1) AS pct_sans ORDER BY pct_sans DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "Autre, précisez :",
+     "n": 46,
+     "sans": 35,
+     "pct_sans": 76.1
+    },
+    {
+     "val": "Présence indésirable sur une aire",
+     "n": 15,
+     "sans": 10,
+     "pct_sans": 66.7
+    },
+    {
+     "val": "Quasi-collision impliquant un aéronef avec un véhicule ou un piéton",
+     "n": 30,
+     "sans": 14,
+     "pct_sans": 46.7
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "Autre, précisez :",
+     "Présence indésirable"
+    ],
+    "exigence": "citer les deux premières ET signaler le résiduel « Autre, précisez : »"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M14",
+   "question": "Pour quels types d'incidents les actions sont-elles le plus souvent jugées efficaces ?",
+   "type": "single-hop-profond",
+   "operateur": "proportion cible=actions_efficaces",
+   "entites_traversees": [
+    "TypeEvenement",
+    "actions_efficaces"
+   ],
+   "n_hops": 1,
+   "phenomene": "l'efficacité perçue est max sur l'état de surface (25 %) — problèmes physiques, solutions physiques",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false WITH t.label AS val, count(DISTINCT i) AS n, count(DISTINCT CASE WHEN i.actions_efficaces = true THEN i END) AS eff WHERE n >= 30 RETURN val, n, eff, round(100.0*eff/n,1) AS pct ORDER BY pct DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "État de la surface des aires de trafic et de manœuvre",
+     "n": 80,
+     "eff": 20,
+     "pct": 25.0
+    },
+    {
+     "val": "Incursion sur piste ou voie de circulation",
+     "n": 73,
+     "eff": 16,
+     "pct": 21.9
+    },
+    {
+     "val": "Présence indésirable sur une aire",
+     "n": 207,
+     "eff": 36,
+     "pct": 17.4
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "État de la surface des aires de trafic et de manœuvre",
+    "chiffre_appui": "25.0"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M15",
+   "question": "Crée-t-on plus d'actions qu'on n'en clôture ces dernières années ?",
+   "type": "tendance-double-serie",
+   "operateur": "flux_compare (HORS PÉRIMÈTRE ACTUEL — frontière)",
+   "entites_traversees": [
+    "Action",
+    "date_ajout",
+    "date_cloture"
+   ],
+   "n_hops": 1,
+   "phenomene": "léger déficit chronique depuis 2023 : 190/176, 276/253, 286/280 — le stock grossit doucement",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND a.date_ajout >= '2021' WITH substring(a.date_ajout,0,4) AS annee, count(DISTINCT a) AS creees OPTIONAL MATCH (i1:IncidentSecu)-[:A_POUR_ACTION]->(b:Action) WHERE coalesce(i1.is_test_data,false)=false AND substring(b.date_cloture,0,4) = annee RETURN annee, creees, count(DISTINCT b) AS cloturees ORDER BY annee",
+   "resultat": [
+    {
+     "annee": "2021",
+     "creees": 54,
+     "cloturees": 65
+    },
+    {
+     "annee": "2022",
+     "creees": 41,
+     "cloturees": 38
+    },
+    {
+     "annee": "2023",
+     "creees": 190,
+     "cloturees": 176
+    },
+    {
+     "annee": "2024",
+     "creees": 276,
+     "cloturees": 253
+    },
+    {
+     "annee": "2025",
+     "creees": 286,
+     "cloturees": 280
+    },
+    {
+     "annee": "2026",
+     "creees": 87,
+     "cloturees": 102
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention+jugeable",
+    "attendu": "oui",
+    "exigence": "OUI léger depuis 2023, avec au moins un couple créées/clôturées cité"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M16",
+   "question": "Parmi les incidents au roulage, la part des graves diminue-t-elle depuis 2020 ?",
+   "type": "conditionnel-tendance",
+   "operateur": "tendance_de_proportion (HORS PÉRIMÈTRE ACTUEL — frontière)",
+   "entites_traversees": [
+    "PhaseVol",
+    "gravite",
+    "date_evenement"
+   ],
+   "n_hops": 2,
+   "phenomene": "OUI et c'est la bonne nouvelle cachée : le volume roulage explose (12→67/an) mais le taux de graves chute (18 % → 6 %) — plus de remontées, moins de gravité",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:EN_PHASE_DE_VOL]->(p:PhaseVol {label:'Roulage'}) WHERE coalesce(i.is_test_data,false)=false AND i.date_evenement >= '2020' WITH substring(i.date_evenement,0,4) AS annee, count(DISTINCT i) AS n, count(DISTINCT CASE WHEN i.severite IN ['4 - élevé','5 - intolérable'] THEN i END) AS g RETURN annee, n, g, round(100.0*g/n,1) AS pct ORDER BY annee",
+   "resultat": [
+    {
+     "annee": "2021",
+     "pct": 16.7
+    },
+    {
+     "annee": "2022",
+     "pct": 18.2
+    },
+    {
+     "annee": "2023",
+     "pct": 17.9
+    },
+    {
+     "annee": "2024",
+     "pct": 11.9
+    },
+    {
+     "annee": "2025",
+     "pct": 6.0
+    }
+   ],
+   "verite_terrain": {
+    "eval": "direction",
+    "attendu": "baisse",
+    "exigence": "OUI en proportion, idéalement en notant que le volume augmente"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M17",
+   "question": "Sur le parking avions, le type d'incident dominant est-il le même de jour et de nuit ?",
+   "type": "comparatif-conditionnel",
+   "operateur": "double argmax conditionnel (HORS PÉRIMÈTRE ACTUEL — frontière)",
+   "entites_traversees": [
+    "Lieu",
+    "condition_lumineuse",
+    "TypeEvenement"
+   ],
+   "n_hops": 3,
+   "phenomene": "OUI : FOD domine jour (392) ET nuit (89) — l'invariant du parking",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:LOCALISE_EN]->(l:Lieu {label:'Parking avions'}) MATCH (i)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false AND i.condition_lumineuse IN ['Jour','Nuit'] WITH i.condition_lumineuse AS cond, t.label AS typ, count(DISTINCT i) AS n ORDER BY cond, n DESC WITH cond, collect({typ:typ, n:n})[..2] AS top RETURN cond, top",
+   "resultat": [
+    {
+     "cond": "Jour",
+     "top": [
+      {
+       "typ": "FOD",
+       "n": 392
+      },
+      {
+       "typ": "Mauvaise utilisation des matériels de piste (stationnement)",
+       "n": 189
+      }
+     ]
+    },
+    {
+     "cond": "Nuit",
+     "top": [
+      {
+       "typ": "FOD",
+       "n": 89
+      },
+      {
+       "typ": "Autre, précisez :",
+       "n": 51
+      }
+     ]
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "oui",
+     "FOD"
+    ],
+    "exigence": "répondre OUI avec FOD des deux côtés"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M18",
+   "question": "Parmi les incidents impliquant un A320, quel type d'événement est le plus fréquent ?",
+   "type": "conditionnel",
+   "operateur": "frequence+conditions (dim aeronef)",
+   "entites_traversees": [
+    "TypeAeronef",
+    "TypeEvenement"
+   ],
+   "n_hops": 2,
+   "phenomene": "profil A320 : d'abord le péril aviaire (169)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:IMPLIQUE_AERONEF]->(ae:TypeAeronef) WHERE coalesce(i.is_test_data,false)=false AND toLower(ae.label) CONTAINS '320' MATCH (i)-[:DE_TYPE]->(t:TypeEvenement) RETURN t.label AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "Collision aviaire",
+     "n": 169
+    },
+    {
+     "val": "Autre, précisez :",
+     "n": 156
+    },
+    {
+     "val": "Quasi-collision impliquant un aéronef avec un véhicule ou un piéton",
+     "n": 87
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Collision aviaire",
+    "chiffre_appui": "169"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M19",
+   "question": "En phase de stationnement, quel facteur contributif revient le plus ?",
+   "type": "conditionnel-causal",
+   "operateur": "frequence+conditions (dim facteur)",
+   "entites_traversees": [
+    "PhaseVol",
+    "FacteurContributif"
+   ],
+   "n_hops": 2,
+   "phenomene": "au stationnement, le facteur n°1 est la non-conformité (121) — procédures, pas matériel",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:EN_PHASE_DE_VOL]->(p:PhaseVol {label:'Stationnement'}) WHERE coalesce(i.is_test_data,false)=false MATCH (i)-[:A_POUR_FACTEUR]->(f:FacteurContributif) RETURN f.label AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "non_conformite",
+     "n": 121
+    },
+    {
+     "val": "stress_pression",
+     "n": 33
+    },
+    {
+     "val": "defaut_materiel",
+     "n": 33
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "non_conformite",
+    "chiffre_appui": "121"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M20",
+   "question": "Quel lieu cumule à la fois un fort volume d'incidents et une forte proportion de graves ?",
+   "type": "multi-critere",
+   "operateur": "matrice_risque volume×taux (HORS PÉRIMÈTRE ACTUEL — frontière)",
+   "entites_traversees": [
+    "Lieu",
+    "gravite"
+   ],
+   "n_hops": 1,
+   "phenomene": "matrice de risque : Aire de trafic = 617 incidents ET 4,5 % de graves ; le Parking a le volume (2141) et le plus de graves absolus (73) mais un taux moindre (3,4 %)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:LOCALISE_EN]->(l:Lieu) WHERE coalesce(i.is_test_data,false)=false WITH l.label AS val, count(DISTINCT i) AS n, count(DISTINCT CASE WHEN i.severite IN ['4 - élevé','5 - intolérable'] THEN i END) AS g WHERE n >= 200 RETURN val, n, g, round(100.0*g/n,1) AS pct ORDER BY pct DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "Aire de trafic",
+     "n": 617,
+     "g": 28,
+     "pct": 4.5
+    },
+    {
+     "val": "Voie de circulation avions",
+     "n": 314,
+     "g": 12,
+     "pct": 3.8
+    },
+    {
+     "val": "Parking avions",
+     "n": 2141,
+     "g": 73,
+     "pct": 3.4
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Aire de trafic",
+    "chiffre_appui": "4.5",
+    "exigence": "bonus : mentionner le Parking comme premier en graves absolus (73)"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M21",
+   "question": "Les incidents impliquant EasyJet sont-ils plus souvent graves que ceux des autres compagnies ?",
+   "type": "comparatif-normalise",
+   "operateur": "proportion_comparee (population vs population)",
+   "entites_traversees": [
+    "Compagnie",
+    "gravite"
+   ],
+   "n_hops": 2,
+   "phenomene": "LA leçon de normalisation : EasyJet domine en VOLUME (587) mais son taux de graves (5,6 %) est statistiquement indiscernable des autres (5,1 %) — l'exposition n'est pas le risque",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) WHERE coalesce(i.is_test_data,false)=false WITH CASE WHEN toLower(c.nom) CONTAINS 'easyjet' THEN 'EASYJET' ELSE 'autres compagnies' END AS pop, count(DISTINCT i) AS n, count(DISTINCT CASE WHEN i.severite IN ['4 - élevé','5 - intolérable'] THEN i END) AS g RETURN pop, n, g, round(100.0*g/n,1) AS pct ORDER BY pct DESC",
+   "resultat": [
+    {
+     "pop": "EASYJET",
+     "n": 587,
+     "g": 33,
+     "pct": 5.6
+    },
+    {
+     "pop": "autres compagnies",
+     "n": 1610,
+     "g": 82,
+     "pct": 5.1
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "5.6",
+     "5.1"
+    ],
+    "exigence": "répondre NON / taux comparables (écart non significatif, ~0,5 σ) — surtout ne pas conclure qu'EasyJet est « plus dangereuse »"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M22",
+   "question": "Quel couple type d'événement × phase de vol concentre le plus d'incidents ?",
+   "type": "cooccurrence",
+   "operateur": "cooccurrence 2D",
+   "entites_traversees": [
+    "TypeEvenement",
+    "PhaseVol"
+   ],
+   "n_hops": 2,
+   "phenomene": "la signature n°1 du terrain : collision aviaire au décollage (262) et à l'atterrissage (255) — le péril animalier vit aux extrémités de piste",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) MATCH (i)-[:EN_PHASE_DE_VOL]->(p:PhaseVol) WHERE coalesce(i.is_test_data,false)=false RETURN t.label AS typ, p.label AS phase, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "typ": "Collision aviaire",
+     "phase": "Décollage",
+     "n": 262
+    },
+    {
+     "typ": "Collision aviaire",
+     "phase": "Atterrissage",
+     "n": 255
+    },
+    {
+     "typ": "Autre, précisez :",
+     "phase": "Stationnement",
+     "n": 170
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "Collision aviaire",
+     "Décollage"
+    ],
+    "chiffre_appui": "262"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M23",
+   "question": "Sans les incidents du parking avions, quel lieu dominerait ?",
+   "type": "contrefactuel",
+   "operateur": "exclusion (HORS PÉRIMÈTRE ACTUEL — frontière)",
+   "entites_traversees": [
+    "Lieu"
+   ],
+   "n_hops": 1,
+   "phenomene": "derrière le parking (2141), c'est la piste (2458 hors parking) — le duopole apron/piste écrase tout le reste",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:LOCALISE_EN]->(l:Lieu) WHERE coalesce(i.is_test_data,false)=false AND l.label <> 'Parking avions' RETURN l.label AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "Piste",
+     "n": 2458
+    },
+    {
+     "val": "Autre",
+     "n": 1258
+    },
+    {
+     "val": "Aire de trafic",
+     "n": 617
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Piste",
+    "chiffre_appui": "2458"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M24",
+   "question": "Sur les cinq dernières années, le type d'événement dominant change-t-il par rapport à l'historique complet ?",
+   "type": "contrefactuel-temporel",
+   "operateur": "argmax_compare_fenetres (HORS PÉRIMÈTRE ACTUEL — frontière)",
+   "entites_traversees": [
+    "TypeEvenement",
+    "date_evenement"
+   ],
+   "n_hops": 1,
+   "phenomene": "OUI — et c'est un signal de DÉRIVE DE SAISIE : historique = FOD (1986) ; depuis 2021 = « Autre, précisez : » (1168, soit 61 % de tous les « Autre » de 18 ans) — la catégorisation se dégrade",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false WITH t.label AS val, count(DISTINCT i) AS total, count(DISTINCT CASE WHEN i.date_evenement >= '2021' THEN i END) AS recent RETURN val, total, recent ORDER BY total DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "FOD",
+     "total": 1986,
+     "recent": 692
+    },
+    {
+     "val": "Autre, précisez :",
+     "total": 1900,
+     "recent": 1168
+    },
+    {
+     "val": "Collision aviaire",
+     "total": 1683,
+     "recent": 414
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "FOD",
+     "Autre, précisez :"
+    ],
+    "exigence": "répondre OUI (FOD → Autre) ET signaler la dérive de catégorisation que révèle la montée du résiduel"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M25",
+   "question": "Quel service est responsable du traitement du plus grand nombre d'incidents ?",
+   "type": "single-hop-profond",
+   "operateur": "frequence dim=service",
+   "entites_traversees": [
+    "Service"
+   ],
+   "n_hops": 1,
+   "phenomene": "pilotage organisationnel (niveau service, jamais individuel) : SSLIA en tête (66) — noter que seuls 177 incidents ont un service affecté (2 %)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:RESPONSABLE]->(s:Service) WHERE coalesce(i.is_test_data,false)=false RETURN s.label AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "SSLIA",
+     "n": 66
+    },
+    {
+     "val": "Infra aéro",
+     "n": 36
+    },
+    {
+     "val": "OPS - Pôle trafic",
+     "n": 15
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "SSLIA",
+    "chiffre_appui": "66",
+    "exigence": "bonus : signaler la faible couverture du champ (177 incidents affectés)"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M26",
+   "question": "Pour le facteur contributif le plus fréquent, quel type d'événement est le plus touché ?",
+   "type": "multi-hop-difficile",
+   "operateur": "argmax_imbrique (HORS PÉRIMÈTRE ACTUEL — frontière)",
+   "entites_traversees": [
+    "FacteurContributif",
+    "TypeEvenement"
+   ],
+   "n_hops": 3,
+   "phenomene": "argmax à deux étages : non_conformite (741) → mauvaise utilisation des matériels de piste (188) puis repoussage non conforme (128) — la non-conformité est un problème de manutention au sol",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:A_POUR_FACTEUR]->(f:FacteurContributif) WHERE coalesce(i.is_test_data,false)=false WITH f, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1 MATCH (i2:IncidentSecu)-[:A_POUR_FACTEUR]->(f) WHERE coalesce(i2.is_test_data,false)=false MATCH (i2)-[:DE_TYPE]->(t:TypeEvenement) RETURN f.label AS facteur, t.label AS val, count(DISTINCT i2) AS m ORDER BY m DESC LIMIT 3",
+   "resultat": [
+    {
+     "facteur": "non_conformite",
+     "val": "Mauvaise utilisation des matériels de piste (stationnement)",
+     "m": 188
+    },
+    {
+     "facteur": "non_conformite",
+     "val": "Repoussage ou tractage non conformes",
+     "m": 128
+    },
+    {
+     "facteur": "non_conformite",
+     "val": "Autre, précisez :",
+     "m": 103
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "non_conformite",
+     "Mauvaise utilisation"
+    ],
+    "chiffre_appui": "188"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M27",
+   "question": "Parmi les incidents avec blessés, quelle phase de vol revient le plus ?",
+   "type": "conditionnel",
+   "operateur": "frequence+conditions (cible blesses en condition)",
+   "entites_traversees": [
+    "blesses",
+    "PhaseVol"
+   ],
+   "n_hops": 2,
+   "phenomene": "les blessés sont un phénomène SOL : stationnement en tête (7) — la manutention blesse plus que le vol. ⚠️ effectif faible (n=7), à énoncer avec prudence",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:EN_PHASE_DE_VOL]->(p:PhaseVol) WHERE coalesce(i.is_test_data,false)=false AND i.presence_blesses = true RETURN p.label AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "Stationnement",
+     "n": 7
+    },
+    {
+     "val": "Atterrissage",
+     "n": 2
+    },
+    {
+     "val": "Décollage",
+     "n": 2
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Stationnement",
+    "chiffre_appui": "7",
+    "exigence": "bonus : signaler la petitesse de l'effectif"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M28",
+   "question": "Les incidents FOD au parking avions augmentent-ils ces dernières années ?",
+   "type": "conditionnel-tendance",
+   "operateur": "tendance sous double condition (HORS PÉRIMÈTRE ACTUEL — frontière)",
+   "entites_traversees": [
+    "TypeEvenement",
+    "Lieu",
+    "date_evenement"
+   ],
+   "n_hops": 2,
+   "phenomene": "remontée nette depuis 2022 (50 → 88 en 2024 et 2025) mais toujours SOUS le niveau 2019 (117) — reprise post-covid, pas dérive",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement {label:'FOD'}) MATCH (i)-[:LOCALISE_EN]->(l:Lieu {label:'Parking avions'}) WHERE coalesce(i.is_test_data,false)=false AND i.date_evenement >= '2019' RETURN substring(i.date_evenement,0,4) AS annee, count(DISTINCT i) AS n ORDER BY annee",
+   "resultat": [
+    {
+     "annee": "2019",
+     "n": 117
+    },
+    {
+     "annee": "2020",
+     "n": 51
+    },
+    {
+     "annee": "2021",
+     "n": 60
+    },
+    {
+     "annee": "2022",
+     "n": 50
+    },
+    {
+     "annee": "2023",
+     "n": 61
+    },
+    {
+     "annee": "2024",
+     "n": 88
+    },
+    {
+     "annee": "2025",
+     "n": 88
+    }
+   ],
+   "verite_terrain": {
+    "eval": "direction",
+    "attendu": "hausse",
+    "exigence": "hausse depuis 2022, avec la nuance du niveau 2019 non retrouvé"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M29",
+   "question": "Les incidents de nuit débouchent-ils moins souvent sur une action corrective que ceux de jour ?",
+   "type": "comparatif-proportion",
+   "operateur": "proportion cible=avec_action comparée jour/nuit",
+   "entites_traversees": [
+    "condition_lumineuse",
+    "Action"
+   ],
+   "n_hops": 2,
+   "phenomene": "OUI, léger déficit de suivi nocturne : 16,8 % d'incidents suivis d'action la nuit vs 19,7 % le jour",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.condition_lumineuse IN ['Jour','Nuit'] WITH i.condition_lumineuse AS pop, count(DISTINCT i) AS n, count(DISTINCT CASE WHEN EXISTS { (i)-[:A_POUR_ACTION]->() } THEN i END) AS avec RETURN pop, n, avec, round(100.0*avec/n,1) AS pct ORDER BY pct DESC",
+   "resultat": [
+    {
+     "pop": "Jour",
+     "n": 3439,
+     "avec": 678,
+     "pct": 19.7
+    },
+    {
+     "pop": "Nuit",
+     "n": 886,
+     "avec": 149,
+     "pct": 16.8
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "16.8",
+     "19.7"
+    ],
+    "exigence": "répondre OUI, léger, avec les deux taux"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M30",
+   "question": "Quels enseignements tirer des incidents d'avitaillement ?",
+   "type": "ouvert",
+   "operateur": "synthese filtre_type",
+   "entites_traversees": [
+    "TypeEvenement",
+    "gravite",
+    "FacteurContributif"
+   ],
+   "n_hops": 2,
+   "phenomene": "237 incidents, quasi jamais graves (3), facteurs = non-conformité/stress/communication — un risque procédural chronique et bénin, en baisse tendancielle",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false AND toLower(t.label) CONTAINS 'avitaillement' OPTIONAL MATCH (i)-[:A_POUR_FACTEUR]->(f:FacteurContributif) RETURN count(DISTINCT i) AS total, count(DISTINCT CASE WHEN i.severite IN ['4 - élevé','5 - intolérable'] THEN i END) AS graves, collect(DISTINCT f.label)[..4] AS facteurs",
+   "resultat": [
+    {
+     "total": 237,
+     "graves": 3,
+     "facteurs": [
+      "non_conformite",
+      "stress_pression",
+      "defaut_communication",
+      "defaut_materiel"
+     ]
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention+jugeable",
+    "attendu": "237",
+    "exigence": "citer le total, la rareté des graves (3) et des thèmes cohérents ; jugeable par triplet"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M31",
+   "question": "Les incidents graves suivent-ils la même saisonnalité que le volume d'incidents ?",
+   "type": "saisonnalite-comparee",
+   "operateur": "saisonnalite d'une population filtrée (HORS PÉRIMÈTRE ACTUEL — frontière)",
+   "entites_traversees": [
+    "gravite",
+    "date_evenement"
+   ],
+   "n_hops": 1,
+   "phenomene": "le risque grave pique en AUTOMNE-HIVER (octobre 21, février 19, novembre 19) — pas à l'été du pic animalier ; le danger et le volume ne vivent pas au même rythme",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.date_evenement IS NOT NULL WITH substring(i.date_evenement,5,2) AS mois, count(DISTINCT i) AS volume, count(DISTINCT CASE WHEN i.severite IN ['4 - élevé','5 - intolérable'] THEN i END) AS graves RETURN mois, volume, graves ORDER BY graves DESC LIMIT 4",
+   "resultat": [
+    {
+     "mois": "10",
+     "volume": 718,
+     "graves": 21
+    },
+    {
+     "mois": "02",
+     "volume": 700,
+     "graves": 19
+    },
+    {
+     "mois": "11",
+     "volume": 618,
+     "graves": 19
+    },
+    {
+     "mois": "12",
+     "volume": 620,
+     "graves": 18
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "octobre",
+    "chiffre_appui": "21",
+    "exigence": "identifier le pic automne-hiver des graves ; ne pas confondre avec la saisonnalité estivale du péril animalier"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M32",
+   "question": "Quels types d'incidents ne sont jamais revenus à leur niveau d'avant-covid, et lesquels ont explosé depuis ?",
+   "type": "fenetres-comparees",
+   "operateur": "comparaison de fenêtres multi-types (HORS PÉRIMÈTRE ACTUEL — frontière)",
+   "entites_traversees": [
+    "TypeEvenement",
+    "date_evenement"
+   ],
+   "n_hops": 1,
+   "phenomene": "le covid a REDISTRIBUÉ les risques : FOD jamais revenu (182→84, −54 %), collision aviaire en baisse continue (101→54), « mauvaise utilisation des matériels » ×3 (20→65)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false AND i.date_evenement >= '2019' AND i.date_evenement < '2023' AND t.label IN ['FOD','Collision aviaire','Mauvaise utilisation des matériels de piste (stationnement)'] WITH t.label AS typ, substring(i.date_evenement,0,4) AS an, count(DISTINCT i) AS n RETURN typ, collect(an + ':' + toString(n)) AS serie ORDER BY typ",
+   "resultat": [
+    {
+     "typ": "Collision aviaire",
+     "serie": [
+      "2019:101",
+      "2020:71",
+      "2021:76",
+      "2022:54"
+     ]
+    },
+    {
+     "typ": "FOD",
+     "serie": [
+      "2019:182",
+      "2020:72",
+      "2021:91",
+      "2022:84"
+     ]
+    },
+    {
+     "typ": "Mauvaise utilisation des matériels de piste (stationnement)",
+     "serie": [
+      "2019:20",
+      "2020:12",
+      "2021:17",
+      "2022:65"
+     ]
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "FOD",
+     "Mauvaise utilisation"
+    ],
+    "exigence": "FOD non revenu ET l'explosion des mauvaises utilisations de matériels"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M33",
+   "question": "EasyJet et Air France ont-elles le même profil de lieu d'incident ?",
+   "type": "comparatif-2-satellites",
+   "operateur": "double argmax conditionnel (HORS PÉRIMÈTRE ACTUEL — frontière)",
+   "entites_traversees": [
+    "Compagnie",
+    "Lieu"
+   ],
+   "n_hops": 2,
+   "phenomene": "NON — expositions inversées : EasyJet d'abord la Piste (186), Air France d'abord le Parking (122) : profil survol vs profil escale",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) MATCH (i)-[:LOCALISE_EN]->(l:Lieu) WHERE coalesce(i.is_test_data,false)=false AND (toLower(c.nom) CONTAINS 'easyjet' OR toLower(c.nom) CONTAINS 'air france') WITH CASE WHEN toLower(c.nom) CONTAINS 'easyjet' THEN 'EASYJET' ELSE 'AIR FRANCE' END AS cie, l.label AS lieu, count(DISTINCT i) AS n ORDER BY cie, n DESC WITH cie, collect({lieu: lieu, n: n})[..2] AS top RETURN cie, top",
+   "resultat": [
+    {
+     "cie": "AIR FRANCE",
+     "top": [
+      {
+       "lieu": "Parking avions",
+       "n": 122
+      },
+      {
+       "lieu": "Piste",
+       "n": 54
+      }
+     ]
+    },
+    {
+     "cie": "EASYJET",
+     "top": [
+      {
+       "lieu": "Piste",
+       "n": 186
+      },
+      {
+       "lieu": "Parking avions",
+       "n": 173
+      }
+     ]
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "Piste",
+     "Parking avions"
+    ],
+    "exigence": "répondre NON avec les deux profils (EasyJet→Piste, Air France→Parking)"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M34",
+   "question": "Où se concentrent les incidents de non-conformité ?",
+   "type": "conditionnel",
+   "operateur": "frequence+conditions (facteur→lieu)",
+   "entites_traversees": [
+    "FacteurContributif",
+    "Lieu"
+   ],
+   "n_hops": 2,
+   "phenomene": "la non-conformité est un phénomène de PARKING : 381 au parking vs 121 sur l'aire de trafic — c'est la manutention en poste qui déroge",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:A_POUR_FACTEUR]->(f:FacteurContributif {label:'non_conformite'}) MATCH (i)-[:LOCALISE_EN]->(l:Lieu) WHERE coalesce(i.is_test_data,false)=false RETURN l.label AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "Parking avions",
+     "n": 381
+    },
+    {
+     "val": "Aire de trafic",
+     "n": 121
+    },
+    {
+     "val": "Piste",
+     "n": 70
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Parking avions",
+    "chiffre_appui": "381"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M35",
+   "question": "Pour les A320, quelle phase de vol concentre le plus d'incidents ?",
+   "type": "conditionnel",
+   "operateur": "frequence+conditions (aeronef→phase)",
+   "entites_traversees": [
+    "TypeAeronef",
+    "PhaseVol"
+   ],
+   "n_hops": 2,
+   "phenomene": "A320 : l'atterrissage (126) devance de peu le stationnement (124) — le tractage (64) est sa singularité",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:IMPLIQUE_AERONEF]->(ae:TypeAeronef) WHERE coalesce(i.is_test_data,false)=false AND toLower(ae.label) CONTAINS '320' AND NOT toLower(ae.label) CONTAINS '321' MATCH (i)-[:EN_PHASE_DE_VOL]->(p:PhaseVol) RETURN p.label AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "Atterrissage",
+     "n": 126
+    },
+    {
+     "val": "Stationnement",
+     "n": 124
+    },
+    {
+     "val": "Décollage",
+     "n": 85
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Atterrissage",
+    "chiffre_appui": "126",
+    "exigence": "bonus : noter le quasi ex-æquo avec le stationnement (124)"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M36",
+   "question": "Notre pyramide de reporting est-elle saine ? Quel est le ratio incidents / incidents sérieux / accidents ?",
+   "type": "single-hop-profond",
+   "operateur": "frequence dim=classification + lecture experte",
+   "entites_traversees": [
+    "classification"
+   ],
+   "n_hops": 1,
+   "phenomene": "pyramide 6323 / 553 / 76 ≈ 83:7:1 — un ratio sérieux/accidents de 7:1, cohérent avec une culture de reporting vivante (2224 occurrences sans effet remontées en plus)",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.classification IS NOT NULL RETURN i.classification AS val, count(DISTINCT i) AS n ORDER BY n DESC",
+   "resultat": [
+    {
+     "val": "Incident",
+     "n": 6323
+    },
+    {
+     "val": "Occurence sans effet sur la sécurité",
+     "n": 2224
+    },
+    {
+     "val": "Incident sérieux",
+     "n": 553
+    },
+    {
+     "val": "Accident",
+     "n": 76
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "553",
+     "76"
+    ],
+    "exigence": "donner la pyramide avec ses effectifs"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M37",
+   "question": "Combien de dossiers d'incidents sont encore actifs, et depuis quand traînent les plus anciens ?",
+   "type": "single-hop-profond",
+   "operateur": "comptage filtré + ancienneté (le min(date) est HORS PÉRIMÈTRE — semi-frontière)",
+   "entites_traversees": [
+    "etat",
+    "date_evenement"
+   ],
+   "n_hops": 1,
+   "phenomene": "106 dossiers encore actifs, le plus ancien depuis 2021 — un stock de traitement qui a 4 ans à surveiller",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.etat = 'Actif' RETURN count(DISTINCT i) AS n, min(substring(i.date_evenement,0,4)) AS plus_ancien",
+   "resultat": [
+    {
+     "n": 106,
+     "plus_ancien": "2021"
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "106",
+    "exigence": "bonus : le plus ancien date de 2021"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M38",
+   "question": "Quelle part des incidents a une phase de vol renseignée, et la saisie s'améliore-t-elle ?",
+   "type": "couverture-honnetete",
+   "operateur": "couverture d'un satellite (HORS PÉRIMÈTRE ACTUEL — frontière + piège d'honnêteté)",
+   "entites_traversees": [
+    "PhaseVol"
+   ],
+   "n_hops": 1,
+   "phenomene": "26,2 % seulement — TOUTE analyse par phase ne porte que sur ce sous-ensemble ; mais la saisie s'améliore fortement (0 % en 2015 → 54 % en 2020)",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false WITH count(DISTINCT i) AS tot MATCH (j:IncidentSecu)-[:EN_PHASE_DE_VOL]->() WHERE coalesce(j.is_test_data,false)=false RETURN tot, count(DISTINCT j) AS avec, round(100.0*count(DISTINCT j)/tot,1) AS pct",
+   "resultat": [
+    {
+     "tot": 9191,
+     "avec": 2408,
+     "pct": 26.2
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "26.2",
+    "exigence": "donner la part ET l'implication (les analyses par phase portent sur ce sous-ensemble)"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M39",
+   "question": "Les incidents impliquant Transavia surviennent-ils surtout à l'escale ?",
+   "type": "conditionnel",
+   "operateur": "frequence+conditions (compagnie→phase)",
+   "entites_traversees": [
+    "Compagnie",
+    "PhaseVol"
+   ],
+   "n_hops": 2,
+   "phenomene": "OUI — le stationnement écrase son profil (77 vs 24 atterrissage) : Transavia est une compagnie « à incidents d'escale »",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) WHERE coalesce(i.is_test_data,false)=false AND toLower(c.nom) CONTAINS 'transavia' MATCH (i)-[:EN_PHASE_DE_VOL]->(p:PhaseVol) RETURN p.label AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "Stationnement",
+     "n": 77
+    },
+    {
+     "val": "Atterrissage",
+     "n": 24
+    },
+    {
+     "val": "Décollage",
+     "n": 21
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Stationnement",
+    "chiffre_appui": "77"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M40",
+   "question": "La gravité déclarée des incidents est-elle cohérente avec la présence réelle de blessés ?",
+   "type": "proportion-validation",
+   "operateur": "proportion cible=blesses dim=classification",
+   "entites_traversees": [
+    "classification",
+    "blesses"
+   ],
+   "n_hops": 1,
+   "phenomene": "gradient parfait : Accident 2,63 % de blessés → sérieux 0,72 % → OSE 0,31 % → Incident 0,13 % — la classification déclarée est validée par les faits",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.classification IS NOT NULL WITH i.classification AS val, count(DISTINCT i) AS n, count(DISTINCT CASE WHEN i.presence_blesses = true THEN i END) AS bl RETURN val, n, bl, round(100.0*bl/n,2) AS pct ORDER BY pct DESC",
+   "resultat": [
+    {
+     "val": "Accident",
+     "n": 76,
+     "bl": 2,
+     "pct": 2.63
+    },
+    {
+     "val": "Incident sérieux",
+     "n": 553,
+     "bl": 4,
+     "pct": 0.72
+    },
+    {
+     "val": "Occurence sans effet sur la sécurité",
+     "n": 2224,
+     "bl": 7,
+     "pct": 0.31
+    },
+    {
+     "val": "Incident",
+     "n": 6323,
+     "bl": 8,
+     "pct": 0.13
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Accident",
+    "exigence": "répondre OUI avec le gradient décroissant ; prudence : effectifs de blessés très faibles (2-8)"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M41",
+   "question": "Hors EasyJet, quelle compagnie est la plus impliquée dans les incidents ?",
+   "type": "contrefactuel",
+   "operateur": "exclusion (HORS PÉRIMÈTRE ACTUEL — frontière)",
+   "entites_traversees": [
+    "Compagnie"
+   ],
+   "n_hops": 1,
+   "phenomene": "derrière le volume EasyJet : Air France (270), Transavia (201), HOP! (159)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) WHERE coalesce(i.is_test_data,false)=false AND NOT toLower(c.nom) CONTAINS 'easyjet' RETURN c.nom AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "AIR France",
+     "n": 270
+    },
+    {
+     "val": "TRANSAVIA",
+     "n": 201
+    },
+    {
+     "val": "HOP!",
+     "n": 159
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "AIR France",
+    "chiffre_appui": "270"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M42",
+   "question": "Si on excluait le parking avions et la piste, quel lieu concentrerait les incidents ?",
+   "type": "contrefactuel",
+   "operateur": "exclusion multiple (HORS PÉRIMÈTRE ACTUEL — frontière)",
+   "entites_traversees": [
+    "Lieu"
+   ],
+   "n_hops": 1,
+   "phenomene": "le résiduel « Autre » domine (1258) — signal de saisie — devant l'aire de trafic (617)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:LOCALISE_EN]->(l:Lieu) WHERE coalesce(i.is_test_data,false)=false AND NOT l.label IN ['Parking avions','Piste'] RETURN l.label AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "Autre",
+     "n": 1258
+    },
+    {
+     "val": "Aire de trafic",
+     "n": 617
+    },
+    {
+     "val": "Voie de circulation avions",
+     "n": 314
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "Autre",
+     "Aire de trafic"
+    ],
+    "exigence": "citer les deux premières ET signaler que « Autre » est un résiduel de saisie"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M43",
+   "question": "Quelle combinaison facteur contributif × phase de vol revient le plus ?",
+   "type": "cooccurrence",
+   "operateur": "cooccurrence 2D (facteur×phase)",
+   "entites_traversees": [
+    "FacteurContributif",
+    "PhaseVol"
+   ],
+   "n_hops": 2,
+   "phenomene": "non-conformité × stationnement (121) puis non-conformité × TRACTAGE (81) — le tractage, angle mort peu discuté",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:A_POUR_FACTEUR]->(f:FacteurContributif) MATCH (i)-[:EN_PHASE_DE_VOL]->(p:PhaseVol) WHERE coalesce(i.is_test_data,false)=false RETURN f.label AS facteur, p.label AS phase, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "facteur": "non_conformite",
+     "phase": "Stationnement",
+     "n": 121
+    },
+    {
+     "facteur": "non_conformite",
+     "phase": "Tractage",
+     "n": 81
+    },
+    {
+     "facteur": "priorite_non_cedee",
+     "phase": "Roulage",
+     "n": 53
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "non_conformite",
+     "Stationnement"
+    ],
+    "chiffre_appui": "121"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M44",
+   "question": "Quel couple compagnie × type d'événement domine les incidents ?",
+   "type": "cooccurrence",
+   "operateur": "cooccurrence 2D (compagnie×type)",
+   "entites_traversees": [
+    "Compagnie",
+    "TypeEvenement"
+   ],
+   "n_hops": 2,
+   "phenomene": "EasyJet × « Autre, précisez : » (200) puis EasyJet × aviaire (162) — le résiduel pollue jusqu'aux croisements",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) MATCH (i)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false RETURN c.nom AS cie, t.label AS typ, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "cie": "EASYJET",
+     "typ": "Autre, précisez :",
+     "n": 200
+    },
+    {
+     "cie": "EASYJET",
+     "typ": "Collision aviaire",
+     "n": 162
+    },
+    {
+     "cie": "AIR France",
+     "typ": "Autre, précisez :",
+     "n": 88
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "EASYJET",
+     "Collision aviaire"
+    ],
+    "exigence": "citer le couple de tête ET signaler le résiduel « Autre, précisez : »"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M45",
+   "question": "Que révèlent les incidents d'incursion de piste ?",
+   "type": "ouvert",
+   "operateur": "synthese filtre_type",
+   "entites_traversees": [
+    "TypeEvenement",
+    "gravite",
+    "FacteurContributif"
+   ],
+   "n_hops": 2,
+   "phenomene": "73 incursions, 21 graves (29 % — le taux le plus élevé de tous les types), facteurs non-conformité/communication — LE risque prioritaire du terrain",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false AND toLower(t.label) CONTAINS 'incursion' OPTIONAL MATCH (i)-[:A_POUR_FACTEUR]->(f:FacteurContributif) RETURN count(DISTINCT i) AS total, count(DISTINCT CASE WHEN i.severite IN ['4 - élevé','5 - intolérable'] THEN i END) AS graves, collect(DISTINCT f.label)[..4] AS facteurs",
+   "resultat": [
+    {
+     "total": 73,
+     "graves": 21,
+     "facteurs": [
+      "non_conformite",
+      "defaut_communication",
+      "defaut_materiel",
+      "inexperience"
+     ]
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention+jugeable",
+    "attendu": "73",
+    "exigence": "citer le total, la part grave exceptionnelle (21) et des facteurs cohérents"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M46",
+   "question": "Les quasi-collisions entre aéronefs et véhicules augmentent-elles ces dernières années ?",
+   "type": "tendance",
+   "operateur": "tendance+filtre_type",
+   "entites_traversees": [
+    "TypeEvenement",
+    "date_evenement"
+   ],
+   "n_hops": 1,
+   "phenomene": "EXPLOSION : 22 (2019) → 2 (covid) → 27 (2022) → 70 (2023) → 55 → 49 — un signal fort qui mérite les 234 priorite_non_cedee",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false AND toLower(t.label) CONTAINS 'quasi-collision' AND toLower(t.label) CONTAINS 'véhicule' AND i.date_evenement >= '2019' RETURN substring(i.date_evenement,0,4) AS annee, count(DISTINCT i) AS n ORDER BY annee",
+   "resultat": [
+    {
+     "annee": "2019",
+     "n": 22
+    },
+    {
+     "annee": "2020",
+     "n": 2
+    },
+    {
+     "annee": "2021",
+     "n": 12
+    },
+    {
+     "annee": "2022",
+     "n": 27
+    },
+    {
+     "annee": "2023",
+     "n": 70
+    },
+    {
+     "annee": "2024",
+     "n": 55
+    },
+    {
+     "annee": "2025",
+     "n": 49
+    }
+   ],
+   "verite_terrain": {
+    "eval": "direction",
+    "attendu": "hausse"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M47",
+   "question": "Sur la piste, quel facteur contributif domine ?",
+   "type": "conditionnel-causal",
+   "operateur": "frequence+conditions (lieu→facteur)",
+   "entites_traversees": [
+    "Lieu",
+    "FacteurContributif"
+   ],
+   "n_hops": 2,
+   "phenomene": "sur la piste, c'est le MATÉRIEL qui lâche (75) — pas la procédure (70) : l'inverse du parking. ⚠️ écart serré, à énoncer prudemment",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:LOCALISE_EN]->(l:Lieu {label:'Piste'}) MATCH (i)-[:A_POUR_FACTEUR]->(f:FacteurContributif) WHERE coalesce(i.is_test_data,false)=false RETURN f.label AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "defaut_materiel",
+     "n": 75
+    },
+    {
+     "val": "non_conformite",
+     "n": 70
+    },
+    {
+     "val": "priorite_non_cedee",
+     "n": 59
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "defaut_materiel",
+    "chiffre_appui": "75",
+    "exigence": "bonus : signaler l'écart serré avec la non-conformité (70)"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M48",
+   "question": "Quelle phase de vol a la plus forte proportion d'incidents graves ?",
+   "type": "single-hop-profond",
+   "operateur": "proportion cible=gravite dim=phase_vol",
+   "entites_traversees": [
+    "PhaseVol",
+    "gravite"
+   ],
+   "n_hops": 1,
+   "phenomene": "le ROULAGE : 8,3 % de graves (25/301) — plus du double du taux global : c'est en roulant au sol qu'on frôle le pire",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:EN_PHASE_DE_VOL]->(p:PhaseVol) WHERE coalesce(i.is_test_data,false)=false WITH p.label AS val, count(DISTINCT i) AS n, count(DISTINCT CASE WHEN i.severite IN ['4 - élevé','5 - intolérable'] THEN i END) AS g WHERE n >= 30 RETURN val, n, g, round(100.0*g/n,1) AS pct ORDER BY pct DESC LIMIT 3",
+   "resultat": [
+    {
+     "val": "Roulage",
+     "n": 301,
+     "g": 25,
+     "pct": 8.3
+    },
+    {
+     "val": "Inconnu",
+     "n": 31,
+     "g": 2,
+     "pct": 6.5
+    },
+    {
+     "val": "Manoeuvre",
+     "n": 32,
+     "g": 2,
+     "pct": 6.3
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Roulage",
+    "chiffre_appui": "8.3"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M49",
+   "question": "Quels sont les mois les plus calmes de l'année ?",
+   "type": "saisonnalite",
+   "operateur": "tendance granularite=mois sens=bas",
+   "entites_traversees": [
+    "date_evenement"
+   ],
+   "n_hops": 1,
+   "phenomene": "LE PARADOXE HIVERNAL : novembre (618) et décembre (620) sont les mois les plus CALMES en volume… et parmi les plus GRAVES (cf. M31) — moins d'incidents, plus dangereux",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.date_evenement IS NOT NULL RETURN substring(i.date_evenement,5,2) AS mois, count(DISTINCT i) AS n ORDER BY n ASC LIMIT 3",
+   "resultat": [
+    {
+     "mois": "11",
+     "n": 618
+    },
+    {
+     "mois": "12",
+     "n": 620
+    },
+    {
+     "mois": "04",
+     "n": 624
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "novembre",
+    "chiffre_appui": "618"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M50",
+   "question": "Pour le lieu qui concentre le plus d'incidents, quel type d'événement domine ?",
+   "type": "multi-hop-difficile",
+   "operateur": "argmax_imbrique (HORS PÉRIMÈTRE ACTUEL — frontière)",
+   "entites_traversees": [
+    "Lieu",
+    "TypeEvenement"
+   ],
+   "n_hops": 3,
+   "phenomene": "argmax imbriqué : la PISTE (2458, devant le parking 2141) → collision aviaire (1067) — la piste est le royaume du péril animalier",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:LOCALISE_EN]->(l:Lieu) WHERE coalesce(i.is_test_data,false)=false WITH l, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1 MATCH (i2:IncidentSecu)-[:LOCALISE_EN]->(l) WHERE coalesce(i2.is_test_data,false)=false MATCH (i2)-[:DE_TYPE]->(t:TypeEvenement) RETURN l.label AS lieu, t.label AS val, count(DISTINCT i2) AS m ORDER BY m DESC LIMIT 3",
+   "resultat": [
+    {
+     "lieu": "Piste",
+     "val": "Collision aviaire",
+     "m": 1067
+    },
+    {
+     "lieu": "Piste",
+     "val": "FOD",
+     "m": 423
+    },
+    {
+     "lieu": "Piste",
+     "val": "Autre, précisez :",
+     "m": 251
+    }
+   ],
+   "verite_terrain": {
+    "eval": "mention_multi",
+    "attendus": [
+     "Piste",
+     "Collision aviaire"
+    ],
+    "chiffre_appui": "1067"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M51",
+   "question": "Quels types d'événements dépassent 10 % d'incidents graves ?",
+   "type": "ensemble",
+   "operateur": "enumeration à seuil (HORS PÉRIMÈTRE ACTUEL — frontière : le moteur classe mais ne filtre pas par seuil)",
+   "entites_traversees": [
+    "TypeEvenement",
+    "gravite"
+   ],
+   "n_hops": 1,
+   "phenomene": "le club des types à haut risque : incursion (28,8 %), collision véhicule (13,9 %), quasi-collision aéronefs (12,9 %), incendie/fumée (11,6 %)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false WITH t.label AS val, count(DISTINCT i) AS n, count(DISTINCT CASE WHEN i.severite IN ['4 - élevé','5 - intolérable'] THEN i END) AS g WHERE n >= 30 RETURN val, n, round(100.0*g/n,1) AS pct ORDER BY pct DESC LIMIT 12",
+   "verite_terrain": {
+    "eval": "ensemble_exact",
+    "champ_val": "val",
+    "champ_mesure": "pct",
+    "seuil": 10,
+    "attendu_ensemble": [
+     "Incursion sur piste ou voie de circulation",
+     "Collision impliquant un aéronef avec un véhicule ou un piéton",
+     "Quasi-collision impliquant un aéronef avec un autre aéronef",
+     "Incendie, fumée ou explosion"
+    ]
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M52",
+   "question": "Quelles compagnies comptent plus de 100 incidents ?",
+   "type": "ensemble",
+   "operateur": "enumeration à seuil (HORS PÉRIMÈTRE — frontière)",
+   "entites_traversees": [
+    "Compagnie"
+   ],
+   "n_hops": 1,
+   "phenomene": "5 compagnies au-dessus de 100 : EasyJet (587), Air France (270), Transavia (201), HOP! (159), Volotea (114)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) WHERE coalesce(i.is_test_data,false)=false RETURN c.nom AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 12",
+   "verite_terrain": {
+    "eval": "ensemble_exact",
+    "champ_val": "val",
+    "champ_mesure": "n",
+    "seuil": 100,
+    "attendu_ensemble": [
+     "EASYJET",
+     "AIR France",
+     "TRANSAVIA",
+     "HOP!",
+     "VOLOTEA"
+    ]
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M53",
+   "question": "Quels facteurs contributifs apparaissent dans plus de 200 incidents ?",
+   "type": "ensemble",
+   "operateur": "enumeration à seuil (HORS PÉRIMÈTRE — frontière)",
+   "entites_traversees": [
+    "FacteurContributif"
+   ],
+   "n_hops": 1,
+   "phenomene": "le trio dominant du pourquoi : non-conformité (741), défaut matériel (318), priorité non cédée (243)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:A_POUR_FACTEUR]->(f:FacteurContributif) WHERE coalesce(i.is_test_data,false)=false RETURN f.label AS val, count(DISTINCT i) AS n ORDER BY n DESC",
+   "verite_terrain": {
+    "eval": "ensemble_exact",
+    "champ_val": "val",
+    "champ_mesure": "n",
+    "seuil": 200,
+    "attendu_ensemble": [
+     "non_conformite",
+     "defaut_materiel",
+     "priorite_non_cedee"
+    ]
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M54",
+   "question": "Quelles phases de vol comptent plus de 250 incidents ?",
+   "type": "ensemble",
+   "operateur": "enumeration à seuil (HORS PÉRIMÈTRE — frontière)",
+   "entites_traversees": [
+    "PhaseVol"
+   ],
+   "n_hops": 1,
+   "phenomene": "5 phases majeures : stationnement (788), atterrissage (482), décollage (358), roulage (301), tractage (280) — le SOL écrase le vol",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:EN_PHASE_DE_VOL]->(p:PhaseVol) WHERE coalesce(i.is_test_data,false)=false RETURN p.label AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 12",
+   "verite_terrain": {
+    "eval": "ensemble_exact",
+    "champ_val": "val",
+    "champ_mesure": "n",
+    "seuil": 250,
+    "attendu_ensemble": [
+     "Stationnement",
+     "Atterrissage",
+     "Décollage",
+     "Roulage",
+     "Tractage"
+    ]
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M55",
+   "question": "Quels lieux dépassent 500 incidents ?",
+   "type": "ensemble",
+   "operateur": "enumeration à seuil (HORS PÉRIMÈTRE — frontière)",
+   "entites_traversees": [
+    "Lieu"
+   ],
+   "n_hops": 1,
+   "phenomene": "4 lieux au-dessus de 500 : piste (2458), parking (2141), « Autre » (1258 — résiduel), aire de trafic (617)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:LOCALISE_EN]->(l:Lieu) WHERE coalesce(i.is_test_data,false)=false RETURN l.label AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 12",
+   "verite_terrain": {
+    "eval": "ensemble_exact",
+    "champ_val": "val",
+    "champ_mesure": "n",
+    "seuil": 500,
+    "attendu_ensemble": [
+     "Piste",
+     "Parking avions",
+     "Autre",
+     "Aire de trafic"
+    ],
+    "exigence": "signaler que « Autre » est un résiduel de saisie"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M56",
+   "question": "Quelles années ont dépassé 700 incidents ?",
+   "type": "ensemble",
+   "operateur": "enumeration à seuil (HORS PÉRIMÈTRE — frontière)",
+   "entites_traversees": [
+    "date_evenement"
+   ],
+   "n_hops": 1,
+   "phenomene": "seulement 3 années au-dessus de 700 — et ce sont les 3 dernières complètes : 2024 (1065), 2025 (1021), 2023 (795) — l'ère du reporting massif",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.date_evenement IS NOT NULL RETURN substring(i.date_evenement,0,4) AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 20",
+   "verite_terrain": {
+    "eval": "ensemble_exact",
+    "champ_val": "val",
+    "champ_mesure": "n",
+    "seuil": 700,
+    "attendu_ensemble": [
+     "2024",
+     "2025",
+     "2023"
+    ]
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M57",
+   "question": "Quels types d'événements comptent plus de 20 incidents graves ?",
+   "type": "ensemble",
+   "operateur": "enumeration à seuil sur population filtrée (HORS PÉRIMÈTRE — frontière)",
+   "entites_traversees": [
+    "TypeEvenement",
+    "gravite"
+   ],
+   "n_hops": 1,
+   "phenomene": "en valeur ABSOLUE de graves : « Autre » (46 — résiduel !), quasi-collision véhicule (30), incursion (21)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false AND i.severite IN ['4 - élevé','5 - intolérable'] RETURN t.label AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 12",
+   "verite_terrain": {
+    "eval": "ensemble_exact",
+    "champ_val": "val",
+    "champ_mesure": "n",
+    "seuil": 20,
+    "attendu_ensemble": [
+     "Autre, précisez :",
+     "Quasi-collision impliquant un aéronef avec un véhicule ou un piéton",
+     "Incursion sur piste ou voie de circulation"
+    ],
+    "exigence": "signaler le résiduel « Autre, précisez : »"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M58",
+   "question": "Quels niveaux de sévérité existent dans la base, et avec quels effectifs ?",
+   "type": "ensemble",
+   "operateur": "enumeration complète (frequence dim=severite — in-scope probable)",
+   "entites_traversees": [
+    "severite"
+   ],
+   "n_hops": 1,
+   "phenomene": "l'échelle complète 1→5 : faible 1160, tolérable 2512, important 5318, élevé 164, intolérable 22 — le « 3 - important » est la norme",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.severite IS NOT NULL RETURN i.severite AS val, count(DISTINCT i) AS n ORDER BY val",
+   "verite_terrain": {
+    "eval": "ensemble_exact",
+    "champ_val": "val",
+    "champ_mesure": "n",
+    "seuil": 0,
+    "attendu_ensemble": [
+     "1 - faible",
+     "2 - tolérable",
+     "3 - important",
+     "4 - élevé",
+     "5 - intolérable"
+    ]
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M59",
+   "question": "Quels services ont plus de 10 incidents affectés à leur traitement ?",
+   "type": "ensemble",
+   "operateur": "enumeration à seuil (HORS PÉRIMÈTRE — frontière)",
+   "entites_traversees": [
+    "Service"
+   ],
+   "n_hops": 1,
+   "phenomene": "6 services au-dessus de 10 : SSLIA (66), Infra aéro (36), OPS-Pôle trafic (15), Balisage (15), SPPA (14), LYN (14) — sur 177 incidents affectés seulement (2 %)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:RESPONSABLE]->(s:Service) WHERE coalesce(i.is_test_data,false)=false RETURN s.label AS val, count(DISTINCT i) AS n ORDER BY n DESC",
+   "verite_terrain": {
+    "eval": "ensemble_exact",
+    "champ_val": "val",
+    "champ_mesure": "n",
+    "seuil": 10,
+    "attendu_ensemble": [
+     "SSLIA",
+     "Infra aéro",
+     "OPS - Pôle trafic",
+     "Balisage",
+     "SPPA",
+     "LYN"
+    ],
+    "exigence": "bonus : rappeler la faible couverture du champ service (2 %)"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M60",
+   "question": "Quels types d'aéronefs apparaissent dans plus de 100 incidents ?",
+   "type": "ensemble",
+   "operateur": "enumeration à seuil (HORS PÉRIMÈTRE — frontière)",
+   "entites_traversees": [
+    "TypeAeronef"
+   ],
+   "n_hops": 1,
+   "phenomene": "5 types au-dessus de 100 : A320 (631), A319 (319), B737-800 (206), A321 (115), CRJ1000 (114) — la famille A32x domine l'exposition",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:IMPLIQUE_AERONEF]->(a:TypeAeronef) WHERE coalesce(i.is_test_data,false)=false RETURN a.label AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 12",
+   "verite_terrain": {
+    "eval": "ensemble_exact",
+    "champ_val": "val",
+    "champ_mesure": "n",
+    "seuil": 100,
+    "attendu_ensemble": [
+     "A320 / 320",
+     "A319 / 319",
+     "Boeing 737-800 / 738",
+     "A321 / 321",
+     "CRJ 1000 / CRK"
+    ]
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M61",
+   "question": "Pourquoi les incidents ont-ils doublé en 2022 ?",
+   "type": "fausse-premisse",
+   "operateur": "correction de présupposé (axe pièges)",
+   "premisse_fausse": "les incidents n'ont PAS doublé : 465 (2021) → 523 (2022), soit +12 %",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND substring(i.date_evenement,0,4) IN ['2021','2022'] RETURN substring(i.date_evenement,0,4) AS an, count(DISTINCT i) AS n ORDER BY an",
+   "resultat": [
+    {
+     "an": "2021",
+     "n": 465
+    },
+    {
+     "an": "2022",
+     "n": 523
+    }
+   ],
+   "verite_terrain": {
+    "eval": "premisse_corrigee",
+    "attendu": "523",
+    "exigence": "contester le « doublé » et citer 465→523"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M62",
+   "question": "Pourquoi EasyJet est-elle la compagnie la plus dangereuse ?",
+   "type": "fausse-premisse",
+   "operateur": "correction de présupposé (axe pièges)",
+   "premisse_fausse": "volume ≠ dangerosité : taux de graves EasyJet 5,6 % vs autres 5,1 % — indiscernable",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) WHERE coalesce(i.is_test_data,false)=false WITH CASE WHEN toLower(c.nom) CONTAINS 'easyjet' THEN 'EASYJET' ELSE 'autres' END AS pop, count(DISTINCT i) AS n, count(DISTINCT CASE WHEN i.severite IN ['4 - élevé','5 - intolérable'] THEN i END) AS g RETURN pop, n, round(100.0*g/n,1) AS pct ORDER BY pop",
+   "resultat": [
+    {
+     "pop": "EASYJET",
+     "n": 587,
+     "pct": 5.6
+    },
+    {
+     "pop": "autres",
+     "n": 1610,
+     "pct": 5.1
+    }
+   ],
+   "verite_terrain": {
+    "eval": "premisse_corrigee",
+    "attendu": "5.6",
+    "exigence": "contester « la plus dangereuse » : exposition ≠ risque, taux comparables"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M63",
+   "question": "Combien d'incidents de drones en 2010 ?",
+   "type": "fausse-premisse",
+   "operateur": "correction de présupposé — entité inexistante (axe pièges)",
+   "premisse_fausse": "aucun type « drone » n'existe dans la base (0 incident)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false AND toLower(t.label) CONTAINS 'drone' RETURN count(DISTINCT i) AS n",
+   "resultat": [
+    {
+     "n": 0
+    }
+   ],
+   "verite_terrain": {
+    "eval": "premisse_corrigee",
+    "attendu": "aucun",
+    "exigence": "dire qu'aucun incident de drone n'est recensé — sans inventer de chiffre"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M64",
+   "question": "Pourquoi la nuit concentre-t-elle la majorité des incidents ?",
+   "type": "fausse-premisse",
+   "operateur": "correction de présupposé (axe pièges)",
+   "premisse_fausse": "le JOUR domine largement : 3439 vs 886 la nuit (20 %) — la nuit est plus GRAVE, pas plus fréquente",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.condition_lumineuse IN ['Jour','Nuit'] RETURN i.condition_lumineuse AS c, count(DISTINCT i) AS n ORDER BY n DESC",
+   "resultat": [
+    {
+     "c": "Jour",
+     "n": 3439
+    },
+    {
+     "c": "Nuit",
+     "n": 886
+    }
+   ],
+   "verite_terrain": {
+    "eval": "premisse_corrigee",
+    "attendu": "3439",
+    "exigence": "contester la « majorité la nuit » avec les deux effectifs"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M65",
+   "question": "Pourquoi le parking avions est-il le lieu numéro un des incidents ?",
+   "type": "fausse-premisse",
+   "operateur": "correction de présupposé — plausible mais faux (axe pièges)",
+   "premisse_fausse": "c'est la PISTE qui est n°1 (2458) devant le parking (2141) — prémisse plausible, donc piège difficile",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:LOCALISE_EN]->(l:Lieu) WHERE coalesce(i.is_test_data,false)=false RETURN l.label AS val, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 2",
+   "resultat": [
+    {
+     "val": "Piste",
+     "n": 2458
+    },
+    {
+     "val": "Parking avions",
+     "n": 2141
+    }
+   ],
+   "verite_terrain": {
+    "eval": "premisse_corrigee",
+    "attendu": "Piste",
+    "exigence": "corriger : la piste (2458) devance le parking (2141)"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M66",
+   "question": "Les collisions aviaires explosent ces dernières années — pourquoi ?",
+   "type": "fausse-premisse",
+   "operateur": "correction de présupposé — vérité NUANCÉE (axe pièges)",
+   "premisse_fausse": "pas d'explosion : pic isolé en 2023 (116) puis DÉCRUE 98 → 67 (2025) — la vérité exige la nuance, pas l'inversion simple",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement {label:'Collision aviaire'}) WHERE coalesce(i.is_test_data,false)=false AND i.date_evenement >= '2019' RETURN substring(i.date_evenement,0,4) AS an, count(DISTINCT i) AS n ORDER BY an",
+   "resultat": [
+    {
+     "an": "2019",
+     "n": 101
+    },
+    {
+     "an": "2020",
+     "n": 71
+    },
+    {
+     "an": "2021",
+     "n": 76
+    },
+    {
+     "an": "2022",
+     "n": 54
+    },
+    {
+     "an": "2023",
+     "n": 116
+    },
+    {
+     "an": "2024",
+     "n": 98
+    },
+    {
+     "an": "2025",
+     "n": 67
+    }
+   ],
+   "verite_terrain": {
+    "eval": "premisse_corrigee",
+    "attendu": "67",
+    "exigence": "contester l'« explosion » : pic 2023 (116) puis baisse jusqu'à 67 en 2025"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M67",
+   "question": "Quel est le seul facteur contributif identifié dans la base ?",
+   "type": "fausse-premisse",
+   "operateur": "correction de présupposé (axe pièges)",
+   "premisse_fausse": "il y a 8 facteurs contributifs, pas un seul",
+   "cypher_reference": "MATCH (f:FacteurContributif)<-[:A_POUR_FACTEUR]-(i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false RETURN count(DISTINCT f.label) AS nb_facteurs",
+   "resultat": [
+    {
+     "nb_facteurs": 8
+    }
+   ],
+   "verite_terrain": {
+    "eval": "premisse_corrigee",
+    "attendu": "8",
+    "exigence": "corriger « le seul » : 8 facteurs, citer les principaux"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M68",
+   "question": "Pourquoi n'y a-t-il aucun incident avec blessés dans la base ?",
+   "type": "fausse-premisse",
+   "operateur": "correction de présupposé (axe pièges)",
+   "premisse_fausse": "il y a 21 incidents avec blessés",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.presence_blesses = true RETURN count(DISTINCT i) AS n",
+   "resultat": [
+    {
+     "n": 21
+    }
+   ],
+   "verite_terrain": {
+    "eval": "premisse_corrigee",
+    "attendu": "21",
+    "exigence": "contester l'« aucun » avec le vrai compte (21)"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M69",
+   "question": "Puisque le roulage est la phase la plus sûre, pourquoi s'en préoccuper ?",
+   "type": "fausse-premisse",
+   "operateur": "correction de présupposé — inversion totale (axe pièges)",
+   "premisse_fausse": "le roulage est la phase la plus RISQUÉE proportionnellement : 8,3 % de graves (25/301)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:EN_PHASE_DE_VOL]->(p:PhaseVol) WHERE coalesce(i.is_test_data,false)=false WITH p.label AS val, count(DISTINCT i) AS n, count(DISTINCT CASE WHEN i.severite IN ['4 - élevé','5 - intolérable'] THEN i END) AS g WHERE n >= 30 RETURN val, n, round(100.0*g/n,1) AS pct ORDER BY pct DESC LIMIT 1",
+   "resultat": [
+    {
+     "val": "Roulage",
+     "n": 301,
+     "pct": 8.3
+    }
+   ],
+   "verite_terrain": {
+    "eval": "premisse_corrigee",
+    "attendu": "8.3",
+    "exigence": "inverser la prémisse : le roulage est la phase la PLUS risquée (8,3 % de graves)"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M70",
+   "question": "Pourquoi toutes les actions correctives sont-elles encore ouvertes ?",
+   "type": "fausse-premisse",
+   "operateur": "correction de présupposé (axe pièges)",
+   "premisse_fausse": "94,9 % des correctives sont CLÔTURÉES (664/700)",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION {type_action:'corrective'}]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false RETURN count(DISTINCT a) AS total, count(DISTINCT CASE WHEN a.statut = '100' OR a.date_cloture IS NOT NULL THEN a END) AS cloturees",
+   "resultat": [
+    {
+     "total": 700,
+     "cloturees": 664
+    }
+   ],
+   "verite_terrain": {
+    "eval": "premisse_corrigee",
+    "attendu": "664",
+    "exigence": "contester le « toutes ouvertes » : 664/700 clôturées"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M71",
+   "question": "Y a-t-il eu des incidents avec blessés en 2020 ?",
+   "type": "booleen",
+   "operateur": "vérification oui/non + chiffre-preuve (polarité dérivée mécaniquement)",
+   "entites_traversees": [],
+   "n_hops": 1,
+   "phenomene": "OUI — un seul (rare, à citer précisément)",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.presence_blesses = true AND substring(i.date_evenement,0,4) = '2020' RETURN count(DISTINCT i) AS n",
+   "resultat": [
+    {
+     "n": 1
+    }
+   ],
+   "verite_terrain": {
+    "eval": "polarite",
+    "attendu": "1"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M72",
+   "question": "Y a-t-il déjà eu un accident sur la piste ?",
+   "type": "booleen",
+   "operateur": "vérification oui/non + chiffre-preuve (polarité dérivée mécaniquement)",
+   "entites_traversees": [],
+   "n_hops": 1,
+   "phenomene": "OUI — 25 accidents sur piste en 18 ans",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:LOCALISE_EN]->(l:Lieu {label:'Piste'}) WHERE coalesce(i.is_test_data,false)=false AND i.classification = 'Accident' RETURN count(DISTINCT i) AS n",
+   "resultat": [
+    {
+     "n": 25
+    }
+   ],
+   "verite_terrain": {
+    "eval": "polarite",
+    "attendu": "25"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M73",
+   "question": "Est-ce qu'EasyJet a été impliquée dans des incidents intolérables ?",
+   "type": "booleen",
+   "operateur": "vérification oui/non + chiffre-preuve (polarité dérivée mécaniquement)",
+   "entites_traversees": [],
+   "n_hops": 1,
+   "phenomene": "OUI — 2 des 22 intolérables",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) WHERE coalesce(i.is_test_data,false)=false AND toLower(c.nom) CONTAINS 'easyjet' AND i.severite = '5 - intolérable' RETURN count(DISTINCT i) AS n",
+   "resultat": [
+    {
+     "n": 2
+    }
+   ],
+   "verite_terrain": {
+    "eval": "polarite",
+    "attendu": "2"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M74",
+   "question": "Y a-t-il eu des incursions de piste en 2025 ?",
+   "type": "booleen",
+   "operateur": "vérification oui/non + chiffre-preuve (polarité dérivée mécaniquement)",
+   "entites_traversees": [],
+   "n_hops": 1,
+   "phenomene": "OUI — 10, dans la continuité de la hausse",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE coalesce(i.is_test_data,false)=false AND toLower(t.label) CONTAINS 'incursion' AND substring(i.date_evenement,0,4)='2025' RETURN count(DISTINCT i) AS n",
+   "resultat": [
+    {
+     "n": 10
+    }
+   ],
+   "verite_terrain": {
+    "eval": "polarite",
+    "attendu": "10"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M75",
+   "question": "A-t-on déjà enregistré des incidents de nuit au parking avions ?",
+   "type": "booleen",
+   "operateur": "vérification oui/non + chiffre-preuve (polarité dérivée mécaniquement)",
+   "entites_traversees": [],
+   "n_hops": 1,
+   "phenomene": "OUI — 308 (le parking vit la nuit)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:LOCALISE_EN]->(l:Lieu {label:'Parking avions'}) WHERE coalesce(i.is_test_data,false)=false AND i.condition_lumineuse = 'Nuit' RETURN count(DISTINCT i) AS n",
+   "resultat": [
+    {
+     "n": 308
+    }
+   ],
+   "verite_terrain": {
+    "eval": "polarite",
+    "attendu": "308"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M76",
+   "question": "Y a-t-il des actions préventives en retard sur leur échéance ?",
+   "type": "booleen",
+   "operateur": "vérification oui/non + chiffre-preuve (polarité dérivée mécaniquement)",
+   "entites_traversees": [],
+   "n_hops": 1,
+   "phenomene": "OUI — 3 (échéance dépendante du jour du run : vérité re-calculée indispensable)",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION {type_action:'préventive'}]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND a.date_prevue IS NOT NULL AND a.date_prevue < date().year + '-' + right('0'+toString(date().month),2) + '-' + right('0'+toString(date().day),2) AND NOT (a.statut = '100' OR a.date_cloture IS NOT NULL) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 3
+    }
+   ],
+   "verite_terrain": {
+    "eval": "polarite",
+    "attendu": "3"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M77",
+   "question": "Est-ce que des incidents ont impliqué des A380 ?",
+   "type": "booleen",
+   "operateur": "vérification oui/non + chiffre-preuve (polarité dérivée mécaniquement)",
+   "entites_traversees": [],
+   "n_hops": 1,
+   "phenomene": "NON — aucun A380 (cas de polarité négative)",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:IMPLIQUE_AERONEF]->(a:TypeAeronef) WHERE coalesce(i.is_test_data,false)=false AND toLower(a.label) CONTAINS '380' RETURN count(DISTINCT i) AS n",
+   "resultat": [
+    {
+     "n": 0
+    }
+   ],
+   "verite_terrain": {
+    "eval": "polarite",
+    "attendu": "0"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M78",
+   "question": "Y a-t-il eu plus de 1000 incidents en 2024 ?",
+   "type": "booleen",
+   "operateur": "vérification oui/non + chiffre-preuve (polarité dérivée mécaniquement)",
+   "entites_traversees": [],
+   "n_hops": 1,
+   "phenomene": "OUI — 1065",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND substring(i.date_evenement,0,4)='2024' RETURN count(DISTINCT i) AS n",
+   "resultat": [
+    {
+     "n": 1065
+    }
+   ],
+   "verite_terrain": {
+    "eval": "polarite",
+    "attendu": "1065"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M79",
+   "question": "Reste-t-il des dossiers d'incidents actifs datant d'avant 2020 ?",
+   "type": "booleen",
+   "operateur": "vérification oui/non + chiffre-preuve (polarité dérivée mécaniquement)",
+   "entites_traversees": [],
+   "n_hops": 1,
+   "phenomene": "NON — le plus ancien actif date de 2021 (cas négatif croisé avec M37)",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.etat = 'Actif' AND substring(i.date_evenement,0,4) < '2020' RETURN count(DISTINCT i) AS n",
+   "resultat": [
+    {
+     "n": 0
+    }
+   ],
+   "verite_terrain": {
+    "eval": "polarite",
+    "attendu": "0"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "M80",
+   "question": "Le facteur météo apparaît-il dans plus de 100 incidents ?",
+   "type": "booleen",
+   "operateur": "vérification oui/non + chiffre-preuve (polarité dérivée mécaniquement)",
+   "entites_traversees": [],
+   "n_hops": 1,
+   "phenomene": "OUI — 115",
+   "cypher_reference": "MATCH (i:IncidentSecu)-[:A_POUR_FACTEUR]->(f:FacteurContributif {label:'meteo'}) WHERE coalesce(i.is_test_data,false)=false RETURN count(DISTINCT i) AS n",
+   "resultat": [
+    {
+     "n": 115
+    }
+   ],
+   "verite_terrain": {
+    "eval": "polarite",
+    "attendu": "115"
+   },
+   "statut": "silver"
+  }
+ ]
+}

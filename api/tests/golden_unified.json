@@ -1,0 +1,95 @@
+{
+  "meta": {
+    "titre": "Golden dataset — moteur unifié /query (extraction NL → UnifiedQuerySpec)",
+    "version": "2026-07-15.1",
+    "regles": [
+      "attendu.filtres : chaque clé doit avoir cette valeur dans la spec (liste = alternatives acceptées)",
+      "tout filtre f_* non nul ABSENT de attendu.filtres = parasite = FAIL",
+      "attendu.status besoin_precision : le moteur DOIT refuser (jamais servir un chiffre)"
+    ]
+  },
+  "questions": [
+    {"id": "A01", "categorie": "A-severite-synonymes", "question": "Les incidents graves",
+     "attendu": {"status": "ok", "output": "liste", "filtres": {"f_severite": "4 - élevé"}}},
+    {"id": "A02", "categorie": "A-severite-synonymes", "question": "Combien d'incidents intolérables ?",
+     "attendu": {"status": "ok", "output": "count", "filtres": {"f_severite": "5 - intolérable"}}},
+    {"id": "A03", "categorie": "A-severite-synonymes", "question": "Combien d'incidents importants ?",
+     "attendu": {"status": "ok", "output": "count", "filtres": {"f_severite": "3 - important"}}},
+    {"id": "A04", "categorie": "A-severite-synonymes", "question": "Les incidents de sévérité faible",
+     "attendu": {"status": "ok", "output": "liste", "filtres": {"f_severite": "1 - faible"}}},
+    {"id": "A05", "categorie": "A-severite-synonymes", "question": "compte moi les incidents qui sont dans le pire niveau de sévérité",
+     "attendu": {"status": "ok", "output": "count", "filtres": {"f_severite": "5 - intolérable"}}},
+    {"id": "A06", "categorie": "A-severite-synonymes", "question": "incidents avec une sévérité trop grave",
+     "attendu": {"status": "ok", "output": "liste", "filtres": {"f_severite": ["4 - élevé", "5 - intolérable"]}}},
+
+    {"id": "B01", "categorie": "B-classification", "question": "Combien d'incidents sérieux ?",
+     "attendu": {"status": "ok", "output": "count", "filtres": {"f_classification": "Incident sérieux"}}},
+    {"id": "B02", "categorie": "B-classification", "question": "Les accidents de 2023",
+     "attendu": {"status": "ok", "output": "liste", "filtres": {"f_classification": "Accident", "f_annee": 2023}}},
+    {"id": "B03", "categorie": "B-classification", "question": "Combien d'occurrences sans effet sur la sécurité ?",
+     "attendu": {"status": "ok", "output": "count", "filtres": {"f_classification": "Occurence sans effet sur la sécurité"}}},
+
+    {"id": "C01", "categorie": "C-booleens", "question": "Combien d'incidents avec des blessés ?",
+     "attendu": {"status": "ok", "output": "count", "filtres": {"f_presence_blesses": true}}},
+    {"id": "C02", "categorie": "C-booleens", "question": "Les incidents sans blessés en 2025",
+     "attendu": {"status": "ok", "output": "liste", "filtres": {"f_presence_blesses": false, "f_annee": 2025}}},
+    {"id": "C03", "categorie": "C-booleens", "question": "Combien d'incidents dont le traitement est terminé ?",
+     "attendu": {"status": "ok", "output": "count", "filtres": {"f_traitement_termine": true}}},
+
+    {"id": "D01", "categorie": "D-condition-lumineuse", "question": "Les incidents de nuit",
+     "attendu": {"status": "ok", "output": "liste", "filtres": {"f_condition_lumineuse": "Nuit"}}},
+    {"id": "D02", "categorie": "D-condition-lumineuse", "question": "Combien d'incidents de jour en 2025 ?",
+     "attendu": {"status": "ok", "output": "count", "filtres": {"f_condition_lumineuse": "Jour", "f_annee": 2025}}},
+
+    {"id": "E01", "categorie": "E-dates", "question": "Combien d'incidents en 2024 ?",
+     "attendu": {"status": "ok", "output": "count", "filtres": {"f_annee": 2024}}},
+    {"id": "E02", "categorie": "E-dates", "question": "Les incidents de mars 2025",
+     "attendu": {"status": "ok", "output": "liste", "filtres": {"f_mois": ["2025-03", "2025-3"]}}},
+    {"id": "E03", "categorie": "E-dates", "question": "Combien d'incidents cette année ?",
+     "attendu": {"status": "ok", "output": "count", "filtres": {"f_annee": 2026}}},
+    {"id": "E04", "categorie": "E-dates", "question": "Combien d'incidents ?",
+     "attendu": {"status": "ok", "output": "count", "filtres": {}}},
+
+    {"id": "F01", "categorie": "F-repartitions", "question": "Répartition des incidents par sévérité",
+     "attendu": {"status": "ok", "output": "repartition", "group_by": "severite", "filtres": {}}},
+    {"id": "F02", "categorie": "F-repartitions", "question": "Répartition des incidents par année",
+     "attendu": {"status": "ok", "output": "repartition", "group_by": "annee", "filtres": {}}},
+    {"id": "F03", "categorie": "F-repartitions", "question": "Ventilation des incidents de nuit par classification",
+     "attendu": {"status": "ok", "output": "repartition", "group_by": "classification",
+                 "filtres": {"f_condition_lumineuse": "Nuit"}}},
+
+    {"id": "G01", "categorie": "G-listes-tri", "question": "Les 10 derniers incidents",
+     "attendu": {"status": "ok", "output": "liste", "filtres": {}, "limit": 10, "order": "desc"}},
+    {"id": "G02", "categorie": "G-listes-tri", "question": "Les 3 incidents les plus anciens",
+     "attendu": {"status": "ok", "output": "liste", "filtres": {}, "limit": 3, "order": "asc"}},
+
+    {"id": "H01", "categorie": "H-actions", "question": "Combien d'actions correctives ?",
+     "attendu": {"status": "ok", "output": "count",
+                 "filtres": {"include_actions": true, "action_type": "corrective"}}},
+    {"id": "H02", "categorie": "H-actions", "question": "Les actions préventives en cours",
+     "attendu": {"status": "ok", "output": "liste",
+                 "filtres": {"include_actions": true, "action_type": "préventive", "action_statut": "en_cours"}}},
+    {"id": "H03", "categorie": "H-actions", "question": "Les incidents de 2025 avec leurs actions correctives",
+     "attendu": {"status": "ok", "output": "liste",
+                 "filtres": {"include_actions": true, "action_type": "corrective", "f_annee": 2025}}},
+    {"id": "H04", "categorie": "H-actions", "question": "Combien d'actions clôturées ?",
+     "attendu": {"status": "ok", "output": "count",
+                 "filtres": {"include_actions": true, "action_statut": "cloturee"}}},
+
+    {"id": "I01", "categorie": "I-couverture (hors formulaire)", "question": "Combien d'incidents impliquant easyJet en 2024 ?",
+     "attendu": {"status": "besoin_precision"}},
+    {"id": "I02", "categorie": "I-couverture (hors formulaire)", "question": "Les incidents à Lyon Bron",
+     "attendu": {"status": "besoin_precision"}},
+    {"id": "I03", "categorie": "I-couverture (hors formulaire)", "question": "Répartition des incidents par compagnie",
+     "attendu": {"status": "besoin_precision"}},
+    {"id": "I04", "categorie": "I-couverture (hors formulaire)", "question": "Combien d'incidents hier ?",
+     "attendu": {"status": "besoin_precision"}},
+
+    {"id": "J01", "categorie": "J-hors-domaine", "question": "Quelle est la météo demain à Lyon ?",
+     "attendu": {"status": "besoin_precision"}},
+    {"id": "J02", "categorie": "J-hors-domaine", "question": "Supprime tous les incidents de test",
+     "attendu": {"status": "besoin_precision"}},
+    {"id": "J03", "categorie": "J-hors-domaine", "question": "Quel est le coût moyen des incidents ?",
+     "attendu": {"status": "besoin_precision"}}
+  ]
+}

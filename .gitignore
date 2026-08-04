@@ -9,7 +9,9 @@ venv/
 
 # Sauvegardes locales et rapports de test (donnees reelles, logins) : ne pas publier
 versions_serveur_*/
-tests/
+**/tests/*
+# EXCEPTION : golden datasets versionnes (logins pseudonymises ; N.B. contiennent des N° FNE reels -> repo PRIVE uniquement)
+!**/tests/golden_*.json
 docs/audit_qualite_donnees.html
 api/glossaire_sigles.json
 docs/defauts_qualite_donnees.md

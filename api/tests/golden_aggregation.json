@@ -1,0 +1,266 @@
+{
+  "meta": {
+    "titre": "Golden agrégation — voie stats",
+    "voie": "stats",
+    "caveat": "Vérité-terrain dérivée de la SOURCE incidents_securites.json (9191 fiches). À revérifier sur le graphe Neo4j (serveur ON) : filtre is_test_data, résolution d'entités. Champ 'blessés' exclu (écart source/ingestion connu).",
+    "metrique": "exactitude du comptage/de la répartition"
+  },
+  "questions": [
+    {
+      "id": "AGG01",
+      "question": "Combien d'incidents avons-nous dans la base ?",
+      "categorie": "comptage",
+      "voie_attendue": "stats",
+      "attendu": 9191,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG02",
+      "question": "Combien d'incidents de type FOD ?",
+      "categorie": "comptage",
+      "voie_attendue": "stats",
+      "attendu": 1973,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG03",
+      "question": "Combien de collisions aviaires ?",
+      "categorie": "comptage",
+      "voie_attendue": "stats",
+      "attendu": 1678,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG04",
+      "question": "Combien de collisions animales ?",
+      "categorie": "comptage",
+      "voie_attendue": "stats",
+      "attendu": 233,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG05",
+      "question": "Combien d'incidents de mauvaise utilisation des matériels de piste ?",
+      "categorie": "comptage",
+      "voie_attendue": "stats",
+      "attendu": 460,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG06",
+      "question": "Combien d'incidents classés comme accident ?",
+      "categorie": "comptage",
+      "voie_attendue": "stats",
+      "attendu": 76,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG07",
+      "question": "Combien d'incidents graves (gravité élevée ou intolérable) ?",
+      "categorie": "comptage",
+      "voie_attendue": "stats",
+      "attendu": 186,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG08",
+      "question": "Combien d'incidents de gravité intolérable (5) ?",
+      "categorie": "comptage",
+      "voie_attendue": "stats",
+      "attendu": 22,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG09",
+      "question": "Combien d'incidents sérieux ?",
+      "categorie": "comptage",
+      "voie_attendue": "stats",
+      "attendu": 553,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG10",
+      "question": "Combien d'incidents sur la piste ?",
+      "categorie": "comptage",
+      "voie_attendue": "stats",
+      "attendu": 2458,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG11",
+      "question": "Combien d'incidents au parking avions ?",
+      "categorie": "comptage",
+      "voie_attendue": "stats",
+      "attendu": 2141,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG12",
+      "question": "Combien d'incidents encore actifs (non clôturés) ?",
+      "categorie": "comptage",
+      "voie_attendue": "stats",
+      "attendu": 106,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG13",
+      "question": "Combien de fiches relèvent de la sûreté (module SURT) ?",
+      "categorie": "comptage",
+      "voie_attendue": "stats",
+      "attendu": 95,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG14",
+      "question": "Combien d'incidents en 2024 ?",
+      "categorie": "comptage",
+      "voie_attendue": "stats",
+      "attendu": 1064,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG15",
+      "question": "Combien d'incidents en 2025 ?",
+      "categorie": "comptage",
+      "voie_attendue": "stats",
+      "attendu": 1022,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG16",
+      "question": "Combien de quasi-collisions entre un aéronef et un véhicule ou un piéton ?",
+      "categorie": "comptage",
+      "voie_attendue": "stats",
+      "attendu": 556,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG17",
+      "question": "Combien d'incidents de dysfonctionnement du SSLIA ?",
+      "categorie": "comptage",
+      "voie_attendue": "stats",
+      "attendu": 380,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG18",
+      "question": "Répartition des incidents par niveau de gravité",
+      "categorie": "repartition",
+      "voie_attendue": "stats",
+      "attendu": {
+        "3 - important": 5318,
+        "2 - tolérable": 2512,
+        "1 - faible": 1160,
+        "4 - élevé": 164,
+        "5 - intolérable": 22
+      },
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG19",
+      "question": "Répartition des incidents par classification (incident / accident / …)",
+      "categorie": "repartition",
+      "voie_attendue": "stats",
+      "attendu": {
+        "Incident": 6323,
+        "Occurence sans effet sur la sécurité": 2224,
+        "Incident sérieux": 553,
+        "Accident": 76
+      },
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG20",
+      "question": "Quels sont les types d'événement les plus fréquents ?",
+      "categorie": "repartition",
+      "voie_attendue": "stats",
+      "attendu": {
+        "FOD": 1973,
+        "Autre, précisez :": 1893,
+        "Collision aviaire": 1678,
+        "Quasi-collision impliquant un aéronef avec un véhicule ou un piéton": 556,
+        "Mauvaise utilisation des matériels de piste (stationnement)": 460,
+        "Dysfonctionnement du SSLIA": 380,
+        "Collision animale": 233,
+        "Repoussage ou tractage non conformes": 230
+      },
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG21",
+      "question": "Répartition des incidents par lieu",
+      "categorie": "repartition",
+      "voie_attendue": "stats",
+      "attendu": {
+        "Piste": 2458,
+        "Parking avions": 2141,
+        "Autre": 1258,
+        "Aire de trafic": 617,
+        "Voie de circulation avions": 314,
+        "Proximité aérodrome": 152,
+        "Route de service": 75
+      },
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG22",
+      "question": "Nombre d'incidents par année",
+      "categorie": "repartition",
+      "voie_attendue": "stats",
+      "attendu": {
+        "2008": 546,
+        "2009": 413,
+        "2010": 381,
+        "2011": 398,
+        "2012": 385,
+        "2013": 273,
+        "2014": 276,
+        "2015": 300,
+        "2016": 326,
+        "2017": 589,
+        "2018": 408,
+        "2019": 498,
+        "2020": 283,
+        "2021": 467,
+        "2022": 524,
+        "2023": 797,
+        "2024": 1064,
+        "2025": 1022,
+        "2026": 241
+      },
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG23",
+      "question": "Combien de FOD se sont produits sur la piste ?",
+      "categorie": "croisement",
+      "voie_attendue": "stats",
+      "attendu": 422,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG24",
+      "question": "Combien de collisions aviaires ont été graves ?",
+      "categorie": "croisement",
+      "voie_attendue": "stats",
+      "attendu": 3,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG25",
+      "question": "Combien de quasi-collisions aéronef / véhicule-piéton ont été graves ?",
+      "categorie": "croisement",
+      "voie_attendue": "stats",
+      "attendu": 30,
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "AGG26",
+      "question": "Combien d'accidents ont eu lieu sur la piste ?",
+      "categorie": "croisement",
+      "voie_attendue": "stats",
+      "attendu": 25,
+      "statut": "a_verifier_graphe"
+    }
+  ]
+}

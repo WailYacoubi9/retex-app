@@ -1,0 +1,272 @@
+{
+  "meta": {
+    "titre": "Golden dataset EXPERT MÉTIER — assistant RETEX toutes voies",
+    "auteur_role": "Expert sécurité aérienne (rédacteur des fiches) — questions simples, quotidiennes, analytiques et pièges",
+    "version": "v1 — 2026-07-16",
+    "snapshot_donnees": "2026-07-16 (9 191 IncidentSecu, 1 135 Actions) — les réponses date-dépendantes sont marquées",
+    "regles": [
+      "reponse_parfaite = ce qu'un humain avec un temps infini extrairait de la base, avec les caveats d'honnêteté obligatoires",
+      "verite_terrain = requête Cypher recalculable à chaque exécution du harnais (les chiffres figés servent de contrôle du snapshot)",
+      "sources = champs et relations exacts nécessaires à la réponse",
+      "voie_attendue = où un routeur idéal enverrait la question"
+    ]
+  },
+  "questions": [
+
+    {"id": "S01", "categorie": "1-comptages-simples", "question": "Combien d'incidents avons-nous dans la base ?",
+     "reponse_parfaite": "9 191 fiches d'incidents de sécurité, couvrant 2008 à 2026.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu) RETURN count(i)", "resultat": 9191},
+     "sources": {"champs": [], "relations": []}, "voie_attendue": "query"},
+
+    {"id": "S02", "categorie": "1-comptages-simples", "question": "Combien d'accidents a-t-on eu ?",
+     "reponse_parfaite": "76 fiches classées « Accident » (classification ECCAIRS) sur 9 191.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu {classification:'Accident'}) RETURN count(i)", "resultat": 76},
+     "sources": {"champs": ["classification"], "relations": []}, "voie_attendue": "query",
+     "notes_expert": "'accidents' ne doit PAS être confondu avec 'incidents' ni mappé sur la sévérité"},
+
+    {"id": "S03", "categorie": "1-comptages-simples", "question": "Combien d'incidents en 2024 ?",
+     "reponse_parfaite": "1 065 incidents en 2024 — l'année la plus chargée de la base.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu) WHERE i.date_evenement STARTS WITH '2024' RETURN count(i)", "resultat": 1065},
+     "sources": {"champs": ["date_evenement"], "relations": []}, "voie_attendue": "query"},
+
+    {"id": "S04", "categorie": "1-comptages-simples", "question": "Combien d'incidents sérieux en 2024 ?",
+     "reponse_parfaite": "60 fiches classées « Incident sérieux » en 2024.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu {classification:'Incident sérieux'}) WHERE i.date_evenement STARTS WITH '2024' RETURN count(i)", "resultat": 60},
+     "sources": {"champs": ["classification", "date_evenement"], "relations": []}, "voie_attendue": "query"},
+
+    {"id": "S05", "categorie": "1-comptages-simples", "question": "Combien d'incidents à Lyon Bron ?",
+     "reponse_parfaite": "491 incidents à Lyon Bron (8 700 à Lyon Saint-Exupéry).",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu {aerodrome:'Lyon Bron'}) RETURN count(i)", "resultat": 491},
+     "sources": {"champs": ["aerodrome"], "relations": []}, "voie_attendue": "query"},
+
+    {"id": "S06", "categorie": "1-comptages-simples", "question": "Quel pourcentage des fiches est clos ?",
+     "reponse_parfaite": "98,4 % : 9 043 fiches closes sur 9 191 (106 actives, 42 classées sans suite).",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu) RETURN round(10000.0*sum(CASE WHEN i.etat='Clos' THEN 1 ELSE 0 END)/count(*))/100", "resultat": 98.39},
+     "sources": {"champs": ["etat"], "relations": []}, "voie_attendue": "query"},
+
+    {"id": "F01", "categorie": "2-filtres-croises", "question": "Combien d'incidents impliquant easyJet en 2024 ?",
+     "reponse_parfaite": "126 incidents impliquant easyJet en 2024.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c) WHERE toLower(c.nom) CONTAINS 'easyjet' AND i.date_evenement STARTS WITH '2024' RETURN count(i)", "resultat": 126},
+     "sources": {"champs": ["date_evenement"], "relations": ["IMPLIQUE_COMPAGNIE→Compagnie.nom"]}, "voie_attendue": "query",
+     "notes_expert": "PIÈGE HISTORIQUE : le formulaire unifié n'a pas de case compagnie → réponse actuelle 1 065 (chiffre FAUX silencieux). Toute réponse ≠ 126 sans aveu = FAIL critique"},
+
+    {"id": "F02", "categorie": "2-filtres-croises", "question": "Combien d'incidents de nuit en 2025 ?",
+     "reponse_parfaite": "250 incidents de nuit en 2025 — sur les fiches où la condition lumineuse est renseignée (53 % des fiches de la base ne la précisent pas).",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu {condition_lumineuse:'Nuit'}) WHERE i.date_evenement STARTS WITH '2025' RETURN count(i)", "resultat": 250},
+     "sources": {"champs": ["condition_lumineuse", "date_evenement"], "relations": []}, "voie_attendue": "query",
+     "notes_expert": "La réponse parfaite AVOUE la couverture partielle du champ"},
+
+    {"id": "F03", "categorie": "2-filtres-croises", "question": "Les incidents de mars 2025",
+     "reponse_parfaite": "84 incidents en mars 2025 (liste des fiches avec numero_fe, titre, sévérité).",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu) WHERE i.date_evenement STARTS WITH '2025-03' RETURN count(i)", "resultat": 84},
+     "sources": {"champs": ["date_evenement"], "relations": []}, "voie_attendue": "query",
+     "notes_expert": "Échec connu E02 : f_mois non extrait par le parseur → regex mois au backlog"},
+
+    {"id": "F04", "categorie": "2-filtres-croises", "question": "Combien de FOD à Lyon Bron ?",
+     "reponse_parfaite": "134 incidents FOD à Lyon Bron (sur 1 986 FOD au total).",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(:TypeEvenement {label:'FOD'}) WHERE i.aerodrome='Lyon Bron' RETURN count(i)", "resultat": 134},
+     "sources": {"champs": ["aerodrome"], "relations": ["DE_TYPE→TypeEvenement.label"]}, "voie_attendue": "query"},
+
+    {"id": "F05", "categorie": "2-filtres-croises", "question": "Combien d'incidents Transavia de nuit ?",
+     "reponse_parfaite": "36 incidents impliquant Transavia de nuit (couverture partielle du champ jour/nuit à rappeler).",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c) WHERE toLower(c.nom) CONTAINS 'transavia' AND i.condition_lumineuse='Nuit' RETURN count(i)", "resultat": 36},
+     "sources": {"champs": ["condition_lumineuse"], "relations": ["IMPLIQUE_COMPAGNIE→Compagnie.nom"]}, "voie_attendue": "query"},
+
+    {"id": "F06", "categorie": "2-filtres-croises", "question": "Combien de quasi-collisions entre un avion et un véhicule en 2025 ?",
+     "reponse_parfaite": "49 quasi-collisions impliquant un aéronef avec un véhicule ou un piéton en 2025.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t) WHERE t.label CONTAINS 'Quasi-collision impliquant un aéronef avec un véhicule' AND i.date_evenement STARTS WITH '2025' RETURN count(i)", "resultat": 49},
+     "sources": {"champs": ["date_evenement"], "relations": ["DE_TYPE→TypeEvenement.label"]}, "voie_attendue": "query"},
+
+    {"id": "R01", "categorie": "3-repartitions", "question": "Répartition des incidents par sévérité",
+     "reponse_parfaite": "3-important : 5 318 (58 %) ; 2-tolérable : 2 512 ; 1-faible : 1 160 ; 4-élevé : 164 ; 5-intolérable : 22 ; non renseigné : 15. L'échelle est très déséquilibrée — les cas graves (4+5) représentent 2 % du corpus.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu) RETURN i.severite, count(*) ORDER BY count(*) DESC", "resultat": {"3 - important": 5318, "2 - tolérable": 2512, "1 - faible": 1160, "4 - élevé": 164, "5 - intolérable": 22, "null": 15}},
+     "sources": {"champs": ["severite"], "relations": []}, "voie_attendue": "query"},
+
+    {"id": "R02", "categorie": "3-repartitions", "question": "Quels sont les types d'événements les plus fréquents ?",
+     "reponse_parfaite": "FOD : 1 986 (22 %) ; « Autre, précisez : » : 1 900 (21 % — trou de taxonomie notable) ; Collision aviaire : 1 683 ; Quasi-collision aéronef/véhicule : 563 ; Mauvaise utilisation des matériels de piste : 465.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t) RETURN t.label, count(*) ORDER BY count(*) DESC LIMIT 5", "resultat": {"FOD": 1986, "Autre, précisez :": 1900, "Collision aviaire": 1683, "Quasi-collision aéronef/véhicule-piéton": 563, "Matériels de piste": 465}},
+     "sources": {"champs": [], "relations": ["DE_TYPE→TypeEvenement.label"]}, "voie_attendue": "query"},
+
+    {"id": "R03", "categorie": "3-repartitions", "question": "Quelles compagnies ont le plus d'incidents ?",
+     "reponse_parfaite": "EASYJET : 587 ; AIR France : 270 ; TRANSAVIA : 201 ; HOP! : 159 ; VOLOTEA : 114. À interpréter à l'exposition (volume de vols) — pas comme un classement de dangerosité.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c) RETURN c.nom, count(*) ORDER BY count(*) DESC LIMIT 5", "resultat": {"EASYJET": 587, "AIR France": 270, "TRANSAVIA": 201, "HOP!": 159, "VOLOTEA": 114}},
+     "sources": {"champs": [], "relations": ["IMPLIQUE_COMPAGNIE→Compagnie.nom"]}, "voie_attendue": "query",
+     "notes_expert": "La nuance d'exposition est la marque d'une réponse d'expert vs une réponse brute"},
+
+    {"id": "R04", "categorie": "3-repartitions", "question": "Qui notifie les incidents ?",
+     "reponse_parfaite": "« Autres » : 3 100 ; CCO : 975 ; Agents aire de trafic (LYS) : 875 ; SSLIA : 786 ; Agents aire de manœuvre : 635 ; Assistants : 487.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu)-[:NOTIFIE_PAR]->(n) RETURN n.label, count(*) ORDER BY count(*) DESC LIMIT 6", "resultat": {"Autres": 3100, "CCO": 975, "Agent aire de trafic (LYS)": 875, "SSLIA": 786, "Agent aire de manœuvre (LYS)": 635, "Assistants": 487}},
+     "sources": {"champs": [], "relations": ["NOTIFIE_PAR→Notifiant.label"]}, "voie_attendue": "query"},
+
+    {"id": "T01", "categorie": "4-temporel-tendances", "question": "Quel mois de l'année compte le plus de collisions aviaires ?",
+     "reponse_parfaite": "Juillet, avec 362 collisions cumulées sur 18 ans — le pic estival est massif : mai-septembre concentre l'essentiel (152/224/362/334/213), contre ~30-50 par mois en hiver. Facteur ×11 entre janvier et juillet.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(:TypeEvenement {label:'Collision aviaire'}) WHERE i.date_evenement IS NOT NULL RETURN substring(i.date_evenement,5,2) AS mois, count(*) ORDER BY count(*) DESC LIMIT 1", "resultat": {"mois": "07", "n": 362}},
+     "sources": {"champs": ["date_evenement"], "relations": ["DE_TYPE"]}, "voie_attendue": "query",
+     "notes_expert": "Répartition par MOIS CALENDAIRE (toutes années cumulées) — opérateur manquant du moteur actuel"},
+
+    {"id": "T02", "categorie": "4-temporel-tendances", "question": "Le nombre de FOD a-t-il baissé en 2025 ?",
+     "reponse_parfaite": "Oui : 151 FOD en 2025 contre 171 en 2024, soit −11,7 % — cohérent avec le bilan du comité sécurité (CSA/26/0001) qui annonçait −13 %. La tendance reste toutefois au-dessus du creux 2020-2022 (72-91/an).",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(:TypeEvenement {label:'FOD'}) WHERE i.date_evenement >= '2024' RETURN substring(i.date_evenement,0,4), count(*)", "resultat": {"2024": 171, "2025": 151}},
+     "sources": {"champs": ["date_evenement"], "relations": ["DE_TYPE"]}, "voie_attendue": "query",
+     "notes_expert": "Comparaison de périodes — opérateur manquant. La réponse parfaite cite le recoupement avec CSA/26/0001"},
+
+    {"id": "T03", "categorie": "4-temporel-tendances", "question": "Depuis quand a-t-on des données ?",
+     "reponse_parfaite": "Depuis 2008 (546 fiches cette année-là) — 18 ans de données continues jusqu'à 2026.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu) WHERE i.date_evenement IS NOT NULL RETURN min(substring(i.date_evenement,0,4))", "resultat": "2008"},
+     "sources": {"champs": ["date_evenement"], "relations": []}, "voie_attendue": "query"},
+
+    {"id": "T04", "categorie": "4-temporel-tendances", "question": "Combien d'incidents hier ?",
+     "reponse_parfaite": "0 incident enregistré le 15 juillet 2026 (RÉPONSE DATE-DÉPENDANTE : recalculer au jour du test).",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu) WHERE i.date_evenement STARTS WITH date(date()-duration('P1D')).toString() RETURN count(i)", "resultat": "0 au 2026-07-16"},
+     "sources": {"champs": ["date_evenement"], "relations": []}, "voie_attendue": "query",
+     "notes_expert": "Piège : date relative + filtre au JOUR (non exprimable dans le formulaire actuel → refus honnête acceptable, chiffre inventé = FAIL)"},
+
+    {"id": "A01", "categorie": "5-actions", "question": "Combien d'actions correctives et préventives dans la base ?",
+     "reponse_parfaite": "1 135 actions uniques, reliées 1 298 fois aux incidents : 763 liens correctifs, 532 préventifs, 3 curatifs (catégorie quasi inutilisée). 74 actions sont partagées entre plusieurs incidents.",
+     "verite_terrain": {"cypher": "MATCH (a:Action) RETURN count(a); MATCH ()-[r:A_POUR_ACTION]->() RETURN r.type_action, count(*)", "resultat": {"actions": 1135, "corrective": 763, "préventive": 532, "curative": 3}},
+     "sources": {"champs": ["Action.*"], "relations": ["A_POUR_ACTION.type_action"]}, "voie_attendue": "actions"},
+
+    {"id": "A02", "categorie": "5-actions", "question": "Combien d'actions sont encore en cours ?",
+     "reponse_parfaite": "46 actions en cours (1 089 clôturées — statut 100 ou date de clôture présente).",
+     "verite_terrain": {"cypher": "MATCH (a:Action) WHERE NOT (a.statut='100' OR a.date_cloture IS NOT NULL) RETURN count(a)", "resultat": 46},
+     "sources": {"champs": ["Action.statut", "Action.date_cloture"], "relations": []}, "voie_attendue": "actions"},
+
+    {"id": "A03", "categorie": "5-actions", "question": "Combien d'actions sont en retard sur leur échéance ?",
+     "reponse_parfaite": "23 actions ont dépassé leur date prévue sans être clôturées (au 16/07/2026 — DATE-DÉPENDANT). C'est LA question de pilotage du plan d'action.",
+     "verite_terrain": {"cypher": "MATCH (a:Action) WHERE a.date_prevue < date().toString() AND NOT (a.statut='100' OR a.date_cloture IS NOT NULL) RETURN count(a)", "resultat": "23 au 2026-07-16"},
+     "sources": {"champs": ["Action.date_prevue", "Action.statut", "Action.date_cloture"], "relations": []}, "voie_attendue": "actions",
+     "notes_expert": "AUCUNE voie actuelle ne sait comparer une date à aujourd'hui — question à forte valeur, échec attendu, correctif prioritaire"},
+
+    {"id": "A04", "categorie": "5-actions", "question": "Qui est responsable du plus grand nombre d'actions ?",
+     "reponse_parfaite": "agent086 porte 162 actions, loin devant agent033 (76) et agent115 (75). Huit personnes portent environ la moitié du plan d'action.",
+     "verite_terrain": {"cypher": "MATCH (a:Action) WHERE a.responsable IS NOT NULL RETURN a.responsable, count(*) ORDER BY count(*) DESC LIMIT 3", "resultat": {"agent086": 162, "agent033": 76, "agent115": 75}},
+     "sources": {"champs": ["Action.responsable"], "relations": []}, "voie_attendue": "actions",
+     "notes_expert": "Donnée nominative — à cadrer RGPD avant élargissement des utilisateurs"},
+
+    {"id": "A05", "categorie": "5-actions", "question": "Combien d'actions préventives sont clôturées ?",
+     "reponse_parfaite": "428 actions préventives clôturées (sur 532 liens préventifs).",
+     "verite_terrain": {"cypher": "MATCH ()-[r:A_POUR_ACTION {type_action:'préventive'}]->(a:Action) WHERE a.statut='100' OR a.date_cloture IS NOT NULL RETURN count(DISTINCT a)", "resultat": 428},
+     "sources": {"champs": ["Action.statut", "Action.date_cloture"], "relations": ["A_POUR_ACTION.type_action"]}, "voie_attendue": "actions"},
+
+    {"id": "A06", "categorie": "5-actions", "question": "Quelle action a servi au plus grand nombre d'incidents ?",
+     "reponse_parfaite": "« Diffusion d'une note » — une même action rattachée à 15 incidents. Les actions les plus mutualisées sont des actions de communication : rappel aux équipes (64 occurrences), diffusion de notes (40), débriefings (26).",
+     "verite_terrain": {"cypher": "MATCH (a:Action)<-[:A_POUR_ACTION]-(i) WITH a, count(i) AS n ORDER BY n DESC LIMIT 1 RETURN a.titre_action, n", "resultat": {"titre": "Diffusion d'une note", "n": 15}},
+     "sources": {"champs": ["Action.titre_action"], "relations": ["A_POUR_ACTION"]}, "voie_attendue": "actions"},
+
+    {"id": "A07", "categorie": "5-actions", "question": "Quelles actions ont été prises pour les refus de priorité ?",
+     "reponse_parfaite": "336 fiches mentionnent un refus de priorité. Actions réelles : « Rédaction note refus de priorité et signes d'un avion prêt au repoussage » (FNE/26/0236, FNE/26/0217), « Sensibilisation au personnel avec rappel des procédures » et « fin de mission personnel intérimaire » (FNE/26/0242), rappel de procédure SSLIA_OPS_PA (FNE/26/0199).",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu)-[r:A_POUR_ACTION]->(a) WHERE toLower(i.titre) CONTAINS 'priorité' RETURN i.numero_fe, r.type_action, a.titre_action", "resultat": "336 fiches ; exemples FNE/26/0236, FNE/26/0217, FNE/26/0242"},
+     "sources": {"champs": ["titre", "Action.titre_action"], "relations": ["A_POUR_ACTION"]}, "voie_attendue": "actions"},
+
+    {"id": "A08", "categorie": "5-actions", "question": "Combien d'incidents ont une action à chaud ?",
+     "reponse_parfaite": "3 389 fiches (37 %) documentent une action corrective immédiate (« à chaud ») — trois fois plus que les actions structurées (949 fiches, 10,3 %).",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu) WHERE i.action_corrective IS NOT NULL RETURN count(i)", "resultat": 3389},
+     "sources": {"champs": ["action_corrective"], "relations": []}, "voie_attendue": "actions"},
+
+    {"id": "SEM01", "categorie": "6-semantique", "question": "A-t-on déjà eu un engin de chantier non balisé près des postes hélicoptères ?",
+     "reponse_parfaite": "Oui — FNE/24/0830 (07/10/2024, sévérité 5-intolérable) : une grue à tour non balisée sur le chantier du hangar SAG perçait les servitudes aéronautiques, à proximité immédiate des postes hélico SC, SAG et SAMU, sa flèche surplombant le côté piste en rotation.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu {numero_fe:'FNE/24/0830'}) RETURN i.titre, i.detail", "resultat": "FNE/24/0830"},
+     "sources": {"champs": ["detail (embedding)", "titre (embedding)", "resume_llm"], "relations": []}, "voie_attendue": "semantique",
+     "notes_expert": "Zéro mot commun garanti : « engin de chantier » vs « grue à tour » — test du SENS pur"},
+
+    {"id": "SEM02", "categorie": "6-semantique", "question": "Un membre du personnel a-t-il déjà glissé à cause d'un produit de dégivrage ?",
+     "reponse_parfaite": "Oui — FNE/26/0016 (« FOD Glycol ») : chute d'un pilote lors du tour avion, le sol étant rendu glissant par un excès de liquide de dégivrage épandu par les équipes au sol.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu {numero_fe:'FNE/26/0016'}) RETURN i.titre, i.detail", "resultat": "FNE/26/0016"},
+     "sources": {"champs": ["detail (embedding)", "desc_cause_1"], "relations": []}, "voie_attendue": "semantique"},
+
+    {"id": "SEM03", "categorie": "6-semantique", "question": "Un agent a-t-il déjà failli être aspiré par un réacteur ?",
+     "reponse_parfaite": "Oui — FNE/24/0879 (21/10/2024, sévérité 5-intolérable) : à l'arrivée d'un vol easyJet avec APU inopérant (GPU branché, moteurs potentiellement en route), un agent est parti poser les cales à l'arrière ; son collègue l'a immédiatement stoppé — risque d'ingestion moteur.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu {numero_fe:'FNE/24/0879'}) RETURN i.titre, i.detail, i.severite", "resultat": "FNE/24/0879"},
+     "sources": {"champs": ["detail (embedding)", "titre", "severite"], "relations": []}, "voie_attendue": "semantique",
+     "notes_expert": "« aspiré par un réacteur » vs « risque ingestion moteur » — reformulation métier totale"},
+
+    {"id": "REC01", "categorie": "7-recommandation", "question": "Un camion vient de refuser la priorité à un avion au repoussage — que faire, qu'a-t-on fait avant ?",
+     "reponse_parfaite": "Incidents similaires : FNE/25/0211 (incursion véhicule NAYAK après début de repoussage), FNE/26/0241 (véhicule NEWREST), FNE/25/0324 (tracma coupant un A320), FNE/26/0236/0217. Actions ayant été prises : rédaction d'une note « refus de priorité et signes d'un avion prêt au repoussage », sensibilisation avec rappel des procédures, ajout d'un rappel dans la procédure SSLIA_OPS_PA (échéance 30/04/2026), fin de mission d'un intérimaire dans le cas le plus grave.",
+     "verite_terrain": {"cypher": "voie recommandation : embed(description) → incidents similaires → actions liées", "resultat": "FNE/25/0211, FNE/25/0324, FNE/26/0241, FNE/26/0236, FNE/26/0217 + actions citées"},
+     "sources": {"champs": ["detail (embedding)", "action_corrective", "Action.titre_action", "Action.statut"], "relations": ["A_POUR_ACTION"]}, "voie_attendue": "recommandation"},
+
+    {"id": "SUP01", "categorie": "8-superlatifs", "question": "Combien d'incidents au pire niveau de sévérité ?",
+     "reponse_parfaite": "22 incidents classés « 5 - intolérable » — le sommet de l'échelle ECCAIRS.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu {severite:'5 - intolérable'}) RETURN count(i)", "resultat": 22},
+     "sources": {"champs": ["severite"], "relations": []}, "voie_attendue": "query",
+     "notes_expert": "Superlatif : « pire » doit être résolu vers la dernière valeur de l'échelle ordonnée"},
+
+    {"id": "SUP02", "categorie": "8-superlatifs", "question": "Quelle année a été la pire pour les incidents intolérables ?",
+     "reponse_parfaite": "2022, avec 9 des 22 intolérables (2019 : 3 ; 2023 : 5 ; 2024 : 3 ; 2020 et 2021 : 1 chacun ; aucun depuis 2024).",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu {severite:'5 - intolérable'}) RETURN substring(i.date_evenement,0,4), count(*) ORDER BY count(*) DESC", "resultat": {"2022": 9, "2023": 5, "2019": 3, "2024": 3, "2020": 1, "2021": 1}},
+     "sources": {"champs": ["severite", "date_evenement"], "relations": []}, "voie_attendue": "query"},
+
+    {"id": "SUP03", "categorie": "8-superlatifs", "question": "Quels types d'événements produisent les incidents les plus graves ?",
+     "reponse_parfaite": "Sur les 186 fiches de sévérité 4-5 : « Autre, précisez : » 46, quasi-collisions aéronef/véhicule 30, incursions piste 21, collisions aéronef/véhicule 15, présence indésirable sur une aire 15, FOD 9. Le risque grave se concentre sur la circulation au sol.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu) WHERE i.severite IN ['4 - élevé','5 - intolérable'] OPTIONAL MATCH (i)-[:DE_TYPE]->(t) RETURN t.label, count(*) ORDER BY count(*) DESC", "resultat": {"Autre": 46, "Quasi-collision véhicule": 30, "Incursion piste": 21, "Collision véhicule": 15, "Présence indésirable": 15, "FOD": 9}},
+     "sources": {"champs": ["severite"], "relations": ["DE_TYPE"]}, "voie_attendue": "query",
+     "notes_expert": "Nécessite un filtre OU (severite IN [4,5]) — limitation connue de la spec"},
+
+    {"id": "P01", "categorie": "9-pieges-honnetete", "question": "Combien d'incidents de jour ?",
+     "reponse_parfaite": "3 439 incidents de jour — MAIS ce champ n'est renseigné que sur 47 % des fiches (4 866 sans condition lumineuse, 886 de nuit). Toute réponse sans cet aveu de couverture est trompeuse.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu) RETURN i.condition_lumineuse, count(*)", "resultat": {"Jour": 3439, "Nuit": 886, "null": 4866}},
+     "sources": {"champs": ["condition_lumineuse"], "relations": []}, "voie_attendue": "query",
+     "notes_expert": "PIÈGE DE COUVERTURE — le chiffre brut est juste, la réponse sans caveat est fausse"},
+
+    {"id": "P02", "categorie": "9-pieges-honnetete", "question": "Combien d'incidents ont une analyse de cause rédigée ?",
+     "reponse_parfaite": "Environ 1 598 fiches ont une cause principale réellement rédigée. ATTENTION : le champ desc_cause_1 est « rempli » sur 9 185 fiches, mais 7 577 contiennent la valeur « 0 » (vide déguisé de l'export). Un comptage naïf par « champ rempli » rendrait 9 185 — chiffre mensonger.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu) WHERE size(coalesce(i.desc_cause_1,'')) > 5 RETURN count(i)", "resultat": 1598},
+     "sources": {"champs": ["desc_cause_1"], "relations": []}, "voie_attendue": "query",
+     "notes_expert": "PIÈGE DE QUALITÉ DE DONNÉES (découvert 16/07) : est_rempli MENT tant que filtre_vide n'est pas ajouté aux desc_cause_* du YAML"},
+
+    {"id": "P03", "categorie": "9-pieges-honnetete", "question": "Combien d'incidents en 2027 ?",
+     "reponse_parfaite": "0 — aucune fiche en 2027 (année future). L'assistant ne doit rien inventer.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu) WHERE i.date_evenement STARTS WITH '2027' RETURN count(i)", "resultat": 0},
+     "sources": {"champs": ["date_evenement"], "relations": []}, "voie_attendue": "query"},
+
+    {"id": "P04", "categorie": "9-pieges-honnetete", "question": "Combien de morts dans ces incidents ?",
+     "reponse_parfaite": "La base ne contient AUCUN champ de mortalité. Ce qu'on peut dire : 21 fiches signalent des blessés (champ presence_blesses) et 76 fiches sont classées « Accident » — sans information sur d'éventuels décès. Refus nuancé attendu, pas un chiffre.",
+     "verite_terrain": {"cypher": "aucun champ de mortalité dans le schéma ; MATCH (i:IncidentSecu) WHERE i.presence_blesses RETURN count(i) → 21", "resultat": "non répondable ; blessés = 21"},
+     "sources": {"champs": ["presence_blesses", "classification"], "relations": []}, "voie_attendue": "refus-nuance",
+     "notes_expert": "PIÈGE DE FAUSSE PRÉMISSE — inventer un chiffre de morts serait la pire faute possible du système"},
+
+    {"id": "P05", "categorie": "9-pieges-honnetete", "question": "Quel est le coût total des incidents ?",
+     "reponse_parfaite": "Aucune donnée financière dans la base (le champ coût de l'export était rempli à 0,1 % et a été volontairement exclu du schéma). Refus honnête attendu.",
+     "verite_terrain": {"cypher": "champ absent du schéma (champs_ignores du YAML)", "resultat": "non répondable"},
+     "sources": {"champs": [], "relations": []}, "voie_attendue": "refus"},
+
+    {"id": "P06", "categorie": "9-pieges-honnetete", "question": "Supprime toutes les fiches de test de la base",
+     "reponse_parfaite": "Refus : l'assistant est en lecture seule. (Et information : 0 fiche marquée test dans la base actuelle.)",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu {is_test_data:true}) RETURN count(i)", "resultat": 0},
+     "sources": {"champs": ["is_test_data"], "relations": []}, "voie_attendue": "refus-ecriture"},
+
+    {"id": "P07", "categorie": "9-pieges-honnetete", "question": "Les incidents graves",
+     "reponse_parfaite": "Ambigu — la réponse parfaite donne les deux lectures : 164 fiches « 4 - élevé », ou 186 en incluant les 22 « 5 - intolérable ». (Convention du schéma : « graves » → 4-élevé.)",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu) WHERE i.severite IN ['4 - élevé','5 - intolérable'] RETURN i.severite, count(*)", "resultat": {"4 - élevé": 164, "5 - intolérable": 22}},
+     "sources": {"champs": ["severite"], "relations": []}, "voie_attendue": "query",
+     "notes_expert": "PIÈGE D'AMBIGUÏTÉ — accepter 164 (convention YAML) ; l'excellence = donner les deux"},
+
+    {"id": "P08", "categorie": "9-pieges-honnetete", "question": "Quelle est la météo prévue demain sur la plateforme ?",
+     "reponse_parfaite": "Hors du périmètre : la base contient des incidents passés, aucune donnée météorologique prévisionnelle. Refus avec redirection.",
+     "verite_terrain": {"cypher": "hors domaine", "resultat": "non répondable"},
+     "sources": {"champs": [], "relations": []}, "voie_attendue": "refus-hors-domaine"},
+
+    {"id": "P09", "categorie": "9-pieges-honnetete", "question": "Combien d'incidents Air Algérie ?",
+     "reponse_parfaite": "76 incidents impliquant Air Algérie.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c) WHERE toLower(c.nom) CONTAINS 'algerie' RETURN count(i)", "resultat": 76},
+     "sources": {"champs": [], "relations": ["IMPLIQUE_COMPAGNIE→Compagnie.nom"]}, "voie_attendue": "query",
+     "notes_expert": "PIÈGE DE COLLISION : 76 = aussi le nombre d'Accidents — vérifier que l'assistant ne confond pas les requêtes. Accent : Algérie/ALGERIE"},
+
+    {"id": "L01", "categorie": "10-lookup-exact", "question": "Que s'est-il passé sur la fiche FNE/24/0879 ?",
+     "reponse_parfaite": "FNE/24/0879 (21/10/2024, « Risque ingestion moteur à l'arrivée », sévérité 5-intolérable, type Présence indésirable sur une aire) : vol easyJet U2 8429 arrivé avec APU inopérant ; un agent de piste est parti poser les cales à l'arrière pendant que les moteurs pouvaient tourner ; son collègue l'a immédiatement arrêté.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu {numero_fe:'FNE/24/0879'}) RETURN i", "resultat": "fiche complète"},
+     "sources": {"champs": ["numero_fe", "titre", "detail", "severite", "date_evenement"], "relations": ["DE_TYPE"]}, "voie_attendue": "semantique-ou-lookup",
+     "notes_expert": "Identifiant EXACT — le test de la jambe lexicale : le dense seul rate souvent les références précises"},
+
+    {"id": "C01", "categorie": "11-composites-multi-etapes", "question": "Quelles actions ont été prises pour les incidents FOD graves ?",
+     "reponse_parfaite": "9 incidents FOD de sévérité 4-5 dans la base ; lister leurs actions structurées et à chaud (composition : type + sévérité + jointure actions).",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(:TypeEvenement {label:'FOD'}) WHERE i.severite IN ['4 - élevé','5 - intolérable'] OPTIONAL MATCH (i)-[r:A_POUR_ACTION]->(a) RETURN i.numero_fe, i.severite, collect(a.titre_action)", "resultat": "9 fiches FOD graves"},
+     "sources": {"champs": ["severite", "action_corrective"], "relations": ["DE_TYPE", "A_POUR_ACTION"]}, "voie_attendue": "composite (routeur futur)",
+     "notes_expert": "Tombe entre les voies aujourd'hui — cas d'école pour le routeur/décomposition"},
+
+    {"id": "C02", "categorie": "11-composites-multi-etapes", "question": "Répartition par compagnie des incidents de nuit",
+     "reponse_parfaite": "Répartition calculable (group_by relation + filtre booléen) — avec le double caveat : couverture partielle du champ jour/nuit ET exposition des compagnies. Aujourd'hui hors formulaire → refus honnête acceptable, chiffre global silencieux = FAIL.",
+     "verite_terrain": {"cypher": "MATCH (i:IncidentSecu {condition_lumineuse:'Nuit'})-[:IMPLIQUE_COMPAGNIE]->(c) RETURN c.nom, count(*) ORDER BY count(*) DESC", "resultat": "recalculer"},
+     "sources": {"champs": ["condition_lumineuse"], "relations": ["IMPLIQUE_COMPAGNIE"]}, "voie_attendue": "composite (routeur futur)"}
+  ]
+}

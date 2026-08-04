@@ -1,0 +1,386 @@
+{
+ "meta": {
+  "titre": "Grille analyste auto-générée + vérité Cypher",
+  "n": 28
+ },
+ "questions": [
+  {
+   "id": "FI-severite",
+   "question": "Quelle sévérité est la plus fréquente parmi les incidents ?",
+   "operateur": "frequence",
+   "entite": "incident",
+   "dimension": "severite",
+   "cible": null,
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "3 - important",
+    "cle": "important",
+    "n": 5318
+   }
+  },
+  {
+   "id": "FI-classification",
+   "question": "Quelle classification d'incident est la plus fréquente ?",
+   "operateur": "frequence",
+   "entite": "incident",
+   "dimension": "classification",
+   "cible": null,
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Incident",
+    "cle": "incident",
+    "n": 6323
+   }
+  },
+  {
+   "id": "FI-condition_lumineuse",
+   "question": "Les incidents surviennent-ils plutôt de jour ou de nuit ?",
+   "operateur": "frequence",
+   "entite": "incident",
+   "dimension": "condition_lumineuse",
+   "cible": null,
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Jour",
+    "cle": "jour",
+    "n": 3439
+   }
+  },
+  {
+   "id": "FI-compagnie",
+   "question": "Quelle compagnie a le plus d'incidents ?",
+   "operateur": "frequence",
+   "entite": "incident",
+   "dimension": "compagnie",
+   "cible": null,
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "EASYJET",
+    "cle": "easyjet",
+    "n": 587
+   }
+  },
+  {
+   "id": "FI-type_evenement",
+   "question": "Quel type d'événement est le plus fréquent ?",
+   "operateur": "frequence",
+   "entite": "incident",
+   "dimension": "type_evenement",
+   "cible": null,
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "FOD",
+    "cle": "fod",
+    "n": 1986
+   }
+  },
+  {
+   "id": "FI-lieu",
+   "question": "Quel lieu concentre le plus d'incidents ?",
+   "operateur": "frequence",
+   "entite": "incident",
+   "dimension": "lieu",
+   "cible": null,
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Piste",
+    "cle": "piste",
+    "n": 2458
+   }
+  },
+  {
+   "id": "FI-phase_vol",
+   "question": "Quelle phase de vol concentre le plus d'incidents ?",
+   "operateur": "frequence",
+   "entite": "incident",
+   "dimension": "phase_vol",
+   "cible": null,
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Stationnement",
+    "cle": "stationnement",
+    "n": 788
+   }
+  },
+  {
+   "id": "FI-aeronef",
+   "question": "Quel type d'aéronef est le plus impliqué dans les incidents ?",
+   "operateur": "frequence",
+   "entite": "incident",
+   "dimension": "aeronef",
+   "cible": null,
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "A320 / 320",
+    "cle": "a320",
+    "n": 631
+   }
+  },
+  {
+   "id": "FI-service",
+   "question": "Quel service est responsable du plus grand nombre d'incidents ?",
+   "operateur": "frequence",
+   "entite": "incident",
+   "dimension": "service",
+   "cible": null,
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "SSLIA",
+    "cle": "sslia",
+    "n": 66
+   }
+  },
+  {
+   "id": "FA-type_action",
+   "question": "Quel type d'action est le plus fréquent ?",
+   "operateur": "frequence",
+   "entite": "action",
+   "dimension": "type_action",
+   "cible": null,
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "corrective",
+    "cle": "corrective",
+    "n": 700
+   }
+  },
+  {
+   "id": "FA-responsable",
+   "question": "Quel responsable porte le plus d'actions ?",
+   "operateur": "frequence",
+   "entite": "action",
+   "dimension": "responsable",
+   "cible": null,
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "agent086",
+    "cle": "agent086",
+    "n": 162
+   }
+  },
+  {
+   "id": "FA-statut",
+   "question": "Quel statut d'avancement est le plus courant pour les actions ?",
+   "operateur": "frequence",
+   "entite": "action",
+   "dimension": "statut",
+   "cible": null,
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "100%",
+    "cle": "100",
+    "n": 291
+   }
+  },
+  {
+   "id": "PI-condition_lumineuse-gravite-haut",
+   "question": "De jour ou de nuit, quand les incidents sont-ils proportionnellement les plus graves ?",
+   "operateur": "proportion",
+   "entite": "incident",
+   "dimension": "condition_lumineuse",
+   "cible": "gravite",
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Nuit",
+    "cle": "nuit",
+    "n": 46
+   }
+  },
+  {
+   "id": "PI-classification-blesses-haut",
+   "question": "Quelle classification d'incident a proportionnellement le plus de blessés ?",
+   "operateur": "proportion",
+   "entite": "incident",
+   "dimension": "classification",
+   "cible": "blesses",
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Accident",
+    "cle": "accident",
+    "n": 2
+   }
+  },
+  {
+   "id": "PI-type_evenement-gravite-haut",
+   "question": "Quel type d'événement est proportionnellement le plus grave ?",
+   "operateur": "proportion",
+   "entite": "incident",
+   "dimension": "type_evenement",
+   "cible": "gravite",
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Incursion sur piste ou voie de circulation",
+    "cle": "incursion",
+    "n": 21
+   }
+  },
+  {
+   "id": "PI-phase_vol-gravite-haut",
+   "question": "Quelle phase de vol est proportionnellement la plus grave ?",
+   "operateur": "proportion",
+   "entite": "incident",
+   "dimension": "phase_vol",
+   "cible": "gravite",
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Roulage",
+    "cle": "roulage",
+    "n": 25
+   }
+  },
+  {
+   "id": "PI-lieu-gravite-haut",
+   "question": "Quel lieu est proportionnellement le plus grave ?",
+   "operateur": "proportion",
+   "entite": "incident",
+   "dimension": "lieu",
+   "cible": "gravite",
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Proximité aérodrome",
+    "cle": "proximite",
+    "n": 12
+   }
+  },
+  {
+   "id": "PI-type_evenement-avec_action-bas",
+   "question": "Quel type d'événement reste le plus souvent sans action corrective ?",
+   "operateur": "proportion",
+   "entite": "incident",
+   "dimension": "type_evenement",
+   "cible": "avec_action",
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "Collision animale",
+    "cle": "collision",
+    "n": 0
+   }
+  },
+  {
+   "id": "PI-type_evenement-actions_efficaces-haut",
+   "question": "Pour quel type d'événement les actions correctives sont-elles le plus souvent efficaces ?",
+   "operateur": "proportion",
+   "entite": "incident",
+   "dimension": "type_evenement",
+   "cible": "actions_efficaces",
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "État de la surface des aires de trafic et de manœuvre",
+    "cle": "etat",
+    "n": 20
+   }
+  },
+  {
+   "id": "PA-type_action-cloturee",
+   "question": "Quel type d'action est le plus souvent clôturé ?",
+   "operateur": "proportion",
+   "entite": "action",
+   "dimension": "type_action",
+   "cible": "cloturee",
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "curative",
+    "cle": "curative",
+    "n": 2
+   }
+  },
+  {
+   "id": "PA-type_action-en_retard",
+   "question": "Quel type d'action est le plus souvent en retard ?",
+   "operateur": "proportion",
+   "entite": "action",
+   "dimension": "type_action",
+   "cible": "en_retard",
+   "verite_terrain": {
+    "eval": "mention",
+    "attendu": "corrective",
+    "cle": "corrective",
+    "n": 20
+   }
+  },
+  {
+   "id": "T-incident-all",
+   "question": "Le nombre d'incidents évolue-t-il dans le temps ?",
+   "operateur": "tendance",
+   "entite": "incident",
+   "dimension": null,
+   "cible": null,
+   "verite_terrain": {
+    "eval": "direction",
+    "attendu": "hausse"
+   }
+  },
+  {
+   "id": "T-incident-FOD",
+   "question": "Les FOD augmentent-ils dans le temps ?",
+   "operateur": "tendance",
+   "entite": "incident",
+   "dimension": null,
+   "cible": null,
+   "verite_terrain": {
+    "eval": "direction",
+    "attendu": "hausse"
+   }
+  },
+  {
+   "id": "T-incident-Collision aviaire",
+   "question": "Les collisions aviaires augmentent-elles au fil des ans ?",
+   "operateur": "tendance",
+   "entite": "incident",
+   "dimension": null,
+   "cible": null,
+   "verite_terrain": {
+    "eval": "direction",
+    "attendu": "baisse"
+   }
+  },
+  {
+   "id": "T-incident-incursion",
+   "question": "Les incursions sur piste augmentent-elles ces dernières années ?",
+   "operateur": "tendance",
+   "entite": "incident",
+   "dimension": null,
+   "cible": null,
+   "verite_terrain": {
+    "eval": "direction",
+    "attendu": "hausse"
+   }
+  },
+  {
+   "id": "T-incident-avitaillement",
+   "question": "Les problèmes d'avitaillement augmentent-ils dans le temps ?",
+   "operateur": "tendance",
+   "entite": "incident",
+   "dimension": null,
+   "cible": null,
+   "verite_terrain": {
+    "eval": "direction",
+    "attendu": "baisse"
+   }
+  },
+  {
+   "id": "T-incident-SSLIA",
+   "question": "Les dysfonctionnements du SSLIA augmentent-ils ?",
+   "operateur": "tendance",
+   "entite": "incident",
+   "dimension": null,
+   "cible": null,
+   "verite_terrain": {
+    "eval": "direction",
+    "attendu": "hausse"
+   }
+  },
+  {
+   "id": "T-action-all",
+   "question": "Les actions correctives augmentent-elles dans le temps ?",
+   "operateur": "tendance",
+   "entite": "action",
+   "dimension": null,
+   "cible": null,
+   "verite_terrain": {
+    "eval": "direction",
+    "attendu": "hausse"
+   }
+  }
+ ]
+}

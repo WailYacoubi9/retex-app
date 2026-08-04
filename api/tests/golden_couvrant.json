@@ -1,0 +1,346 @@
+{
+ "meta": {
+  "titre": "Golden curé couvrant + auto-testable via /auto",
+  "n": 32
+ },
+ "questions": [
+  {
+   "id": "A01",
+   "question": "Combien d'incidents avons-nous dans la base ?",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 9191,
+    "cypher": "MATCH (i:IncidentSecu) RETURN count(i) AS n"
+   }
+  },
+  {
+   "id": "A02",
+   "question": "Combien d'accidents ?",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 76,
+    "cypher": "MATCH (i:IncidentSecu) WHERE i.classification='Accident' RETURN count(i) AS n"
+   }
+  },
+  {
+   "id": "A03",
+   "question": "Combien d'incidents sérieux ?",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 553,
+    "cypher": "MATCH (i:IncidentSecu) WHERE i.classification='Incident sérieux' RETURN count(i) AS n"
+   }
+  },
+  {
+   "id": "A04",
+   "question": "Combien d'incidents de gravité 4 - élevé ?",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 164,
+    "cypher": "MATCH (i:IncidentSecu) WHERE i.severite='4 - élevé' RETURN count(i) AS n"
+   }
+  },
+  {
+   "id": "A05",
+   "question": "Combien d'incidents intolérables ?",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 22,
+    "cypher": "MATCH (i:IncidentSecu) WHERE i.severite='5 - intolérable' RETURN count(i) AS n"
+   }
+  },
+  {
+   "id": "A06",
+   "question": "Combien d'incidents importants ?",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 5318,
+    "cypher": "MATCH (i:IncidentSecu) WHERE i.severite='3 - important' RETURN count(i) AS n"
+   }
+  },
+  {
+   "id": "A07",
+   "question": "Combien d'incidents en 2024 ?",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 1065,
+    "cypher": "MATCH (i:IncidentSecu) WHERE i.date_evenement STARTS WITH '2024' RETURN count(i) AS n"
+   }
+  },
+  {
+   "id": "A08",
+   "question": "Combien d'incidents en 2025 ?",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 1021,
+    "cypher": "MATCH (i:IncidentSecu) WHERE i.date_evenement STARTS WITH '2025' RETURN count(i) AS n"
+   }
+  },
+  {
+   "id": "A09",
+   "question": "Combien d'incidents de nuit ?",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 886,
+    "cypher": "MATCH (i:IncidentSecu) WHERE i.condition_lumineuse='Nuit' RETURN count(i) AS n"
+   }
+  },
+  {
+   "id": "A10",
+   "question": "Combien d'incidents de nuit en 2024 ?",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 187,
+    "cypher": "MATCH (i:IncidentSecu) WHERE i.condition_lumineuse='Nuit' AND i.date_evenement STARTS WITH '2024' RETURN count(i) AS n"
+   }
+  },
+  {
+   "id": "A11",
+   "question": "Combien d'incidents avec des blessés ?",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 21,
+    "cypher": "MATCH (i:IncidentSecu) WHERE i.presence_blesses=true RETURN count(i) AS n"
+   }
+  },
+  {
+   "id": "A12",
+   "question": "Combien d'incidents de jour ?",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 3439,
+    "cypher": "MATCH (i:IncidentSecu) WHERE i.condition_lumineuse='Jour' RETURN count(i) AS n"
+   }
+  },
+  {
+   "id": "A13",
+   "question": "Combien d'incidents de jour en 2025 ?",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 742,
+    "cypher": "MATCH (i:IncidentSecu) WHERE i.condition_lumineuse='Jour' AND i.date_evenement STARTS WITH '2025' RETURN count(i) AS n"
+   }
+  },
+  {
+   "id": "A14",
+   "question": "Combien d'incidents de nuit en 2025 ?",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 250,
+    "cypher": "MATCH (i:IncidentSecu) WHERE i.condition_lumineuse='Nuit' AND i.date_evenement STARTS WITH '2025' RETURN count(i) AS n"
+   }
+  },
+  {
+   "id": "A15",
+   "question": "Combien d'incidents en 2027 ?",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 0,
+    "cypher": "MATCH (i:IncidentSecu) WHERE i.date_evenement STARTS WITH '2027' RETURN count(i) AS n"
+   }
+  },
+  {
+   "id": "T01",
+   "question": "Combien d'actions correctives en cours ?",
+   "voie_attendue": "actions",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 33,
+    "cypher": "MATCH (i:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i.is_test_data,false)=false AND r.type_action='corrective' AND NOT (a.statut='100' OR a.date_cloture IS NOT NULL) RETURN count(DISTINCT a) AS n"
+   }
+  },
+  {
+   "id": "T02",
+   "question": "Combien d'actions préventives ?",
+   "voie_attendue": "actions",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 438,
+    "cypher": "MATCH (i:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i.is_test_data,false)=false AND r.type_action='préventive' RETURN count(DISTINCT a) AS n"
+   }
+  },
+  {
+   "id": "T03",
+   "question": "Combien d'actions clôturées ?",
+   "voie_attendue": "actions",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 1089,
+    "cypher": "MATCH (i:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i.is_test_data,false)=false AND (a.statut='100' OR a.date_cloture IS NOT NULL) RETURN count(DISTINCT a) AS n"
+   }
+  },
+  {
+   "id": "T04",
+   "question": "Quelles actions correctives pour les incidents FOD ?",
+   "voie_attendue": "actions",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "routage",
+    "resultat": null
+   }
+  },
+  {
+   "id": "T05",
+   "question": "Quelles actions sont encore en cours ?",
+   "voie_attendue": "actions",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "routage",
+    "resultat": null
+   }
+  },
+  {
+   "id": "P01",
+   "question": "Quel est le coût total des incidents ?",
+   "voie_attendue": "abstention",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "abstention",
+    "resultat": "abstention"
+   }
+  },
+  {
+   "id": "P02",
+   "question": "Combien de morts dans les incidents ?",
+   "voie_attendue": "abstention",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "abstention",
+    "resultat": "abstention"
+   }
+  },
+  {
+   "id": "P03",
+   "question": "Quelle est la météo prévue demain sur la plateforme ?",
+   "voie_attendue": "abstention",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "abstention",
+    "resultat": "abstention"
+   }
+  },
+  {
+   "id": "P04",
+   "question": "Supprime toutes les fiches de test de la base",
+   "voie_attendue": "abstention",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "abstention",
+    "resultat": "abstention"
+   }
+  },
+  {
+   "id": "R01",
+   "question": "Que s'est-il passé lors des incidents de dégivrage ?",
+   "voie_attendue": "recherche",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "routage",
+    "resultat": null
+   }
+  },
+  {
+   "id": "R02",
+   "question": "Raconte les incidents de collision aviaire",
+   "voie_attendue": "recherche",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "routage",
+    "resultat": null
+   }
+  },
+  {
+   "id": "R03",
+   "question": "Quels incidents de repoussage non conforme ?",
+   "voie_attendue": "recherche",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "routage",
+    "resultat": null
+   }
+  },
+  {
+   "id": "R04",
+   "question": "Décris les problèmes d'avitaillement",
+   "voie_attendue": "recherche",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "routage",
+    "resultat": null
+   }
+  },
+  {
+   "id": "R05",
+   "question": "Décris les incidents impliquant le SSLIA",
+   "voie_attendue": "recherche",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "routage",
+    "resultat": null
+   }
+  },
+  {
+   "id": "C01",
+   "question": "Un camion a refusé la priorité à un avion au repoussage, que recommandes-tu ?",
+   "voie_attendue": "recommandation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "routage",
+    "resultat": null
+   }
+  },
+  {
+   "id": "C02",
+   "question": "Un passager fume pendant l'embarquement, que recommandes-tu ?",
+   "voie_attendue": "recommandation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "routage",
+    "resultat": null
+   }
+  },
+  {
+   "id": "C03",
+   "question": "Un oiseau est ingéré par un réacteur au décollage, que recommandes-tu ?",
+   "voie_attendue": "recommandation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "routage",
+    "resultat": null
+   }
+  }
+ ]
+}

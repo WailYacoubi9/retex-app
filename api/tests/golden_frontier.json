@@ -1,0 +1,317 @@
+{
+ "meta": {
+  "titre": "Golden frontier — trous connus / cas durs",
+  "n": 26
+ },
+ "questions": [
+  {
+   "id": "FC01",
+   "question": "Combien d'incidents impliquant EasyJet ?",
+   "categorie": "filtre-compagnie",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 587,
+    "cypher": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) WHERE c.nom='EASYJET' RETURN count(DISTINCT i) AS n"
+   }
+  },
+  {
+   "id": "FC02",
+   "question": "Combien d'incidents impliquant Air Algérie ?",
+   "categorie": "filtre-compagnie",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 76,
+    "cypher": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) WHERE c.nom='AIR ALGERIE' RETURN count(DISTINCT i) AS n"
+   }
+  },
+  {
+   "id": "FC03",
+   "question": "Combien d'incidents impliquant Transavia ?",
+   "categorie": "filtre-compagnie",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 201,
+    "cypher": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) WHERE c.nom='TRANSAVIA' RETURN count(DISTINCT i) AS n"
+   }
+  },
+  {
+   "id": "FA01",
+   "question": "Combien d'incidents avec un A320 ?",
+   "categorie": "filtre-aeronef",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 631,
+    "cypher": "MATCH (i:IncidentSecu)-[:IMPLIQUE_AERONEF]->(a:TypeAeronef) WHERE a.label='A320 / 320' RETURN count(DISTINCT i) AS n"
+   }
+  },
+  {
+   "id": "FA02",
+   "question": "Combien d'incidents impliquant un Boeing 737 ?",
+   "categorie": "filtre-aeronef",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 206,
+    "cypher": "MATCH (i:IncidentSecu)-[:IMPLIQUE_AERONEF]->(a:TypeAeronef) WHERE a.label='Boeing 737-800 / 738' RETURN count(DISTINCT i) AS n"
+   }
+  },
+  {
+   "id": "FL01",
+   "question": "Combien d'incidents sur la piste ?",
+   "categorie": "filtre-lieu",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 2458,
+    "cypher": "MATCH (i:IncidentSecu)-[:LOCALISE_EN]->(l:Lieu) WHERE l.label='Piste' RETURN count(DISTINCT i) AS n"
+   }
+  },
+  {
+   "id": "FL02",
+   "question": "Combien d'incidents sur les parkings avions ?",
+   "categorie": "filtre-lieu",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 2141,
+    "cypher": "MATCH (i:IncidentSecu)-[:LOCALISE_EN]->(l:Lieu) WHERE l.label='Parking avions' RETURN count(DISTINCT i) AS n"
+   }
+  },
+  {
+   "id": "FP01",
+   "question": "Combien d'incidents au décollage ?",
+   "categorie": "filtre-phase",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 358,
+    "cypher": "MATCH (i:IncidentSecu)-[:EN_PHASE_DE_VOL]->(p:PhaseVol) WHERE p.label='Décollage' RETURN count(DISTINCT i) AS n"
+   }
+  },
+  {
+   "id": "FP02",
+   "question": "Combien d'incidents pendant le stationnement ?",
+   "categorie": "filtre-phase",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 788,
+    "cypher": "MATCH (i:IncidentSecu)-[:EN_PHASE_DE_VOL]->(p:PhaseVol) WHERE p.label='Stationnement' RETURN count(DISTINCT i) AS n"
+   }
+  },
+  {
+   "id": "FP03",
+   "question": "Combien d'incidents à l'atterrissage ?",
+   "categorie": "filtre-phase",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 482,
+    "cypher": "MATCH (i:IncidentSecu)-[:EN_PHASE_DE_VOL]->(p:PhaseVol) WHERE p.label='Atterrissage' RETURN count(DISTINCT i) AS n"
+   }
+  },
+  {
+   "id": "FE01",
+   "question": "Combien d'incidents de type FOD ?",
+   "categorie": "filtre-type-evt",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 1986,
+    "cypher": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE t.label='FOD' RETURN count(DISTINCT i) AS n"
+   }
+  },
+  {
+   "id": "FE02",
+   "question": "Combien de collisions aviaires ?",
+   "categorie": "filtre-type-evt",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 1683,
+    "cypher": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE t.label='Collision aviaire' RETURN count(DISTINCT i) AS n"
+   }
+  },
+  {
+   "id": "FE03",
+   "question": "Combien de dysfonctionnements du SSLIA ?",
+   "categorie": "filtre-type-evt",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 380,
+    "cypher": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE t.label='Dysfonctionnement du SSLIA' RETURN count(DISTINCT i) AS n"
+   }
+  },
+  {
+   "id": "FE04",
+   "question": "Combien de problèmes d'avitaillement ?",
+   "categorie": "filtre-type-evt",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 237,
+    "cypher": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) WHERE t.label='Problème avitaillement' RETURN count(DISTINCT i) AS n"
+   }
+  },
+  {
+   "id": "FS01",
+   "question": "Combien d'incidents sous responsabilité du SSLIA ?",
+   "categorie": "filtre-service",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 66,
+    "cypher": "MATCH (i:IncidentSecu)-[:RESPONSABLE]->(s:Service) WHERE s.label='SSLIA' RETURN count(DISTINCT i) AS n"
+   }
+  },
+  {
+   "id": "FN01",
+   "question": "Combien d'incidents significatifs ?",
+   "categorie": "flag-dur",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 84,
+    "cypher": "MATCH (i:IncidentSecu) WHERE i.est_significatif=true RETURN count(i) AS n"
+   }
+  },
+  {
+   "id": "FN02",
+   "question": "Combien d'incidents graves ou élevés ?",
+   "categorie": "flag-dur",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 186,
+    "cypher": "MATCH (i:IncidentSecu) WHERE i.severite IN ['4 - élevé','5 - intolérable'] RETURN count(i) AS n"
+   }
+  },
+  {
+   "id": "FM01",
+   "question": "Combien de collisions aviaires impliquant Air France ?",
+   "categorie": "multi-hop",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 38,
+    "cypher": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(:TypeEvenement {label:'Collision aviaire'}) MATCH (i)-[:IMPLIQUE_COMPAGNIE]->(:Compagnie {nom:'AIR France'}) RETURN count(DISTINCT i) AS n"
+   }
+  },
+  {
+   "id": "FM02",
+   "question": "Combien d'incidents FOD sur la piste ?",
+   "categorie": "multi-hop",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 423,
+    "cypher": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(:TypeEvenement {label:'FOD'}) MATCH (i)-[:LOCALISE_EN]->(:Lieu {label:'Piste'}) RETURN count(DISTINCT i) AS n"
+   }
+  },
+  {
+   "id": "FM03",
+   "question": "Combien d'incidents au décollage impliquant EasyJet ?",
+   "categorie": "multi-hop",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "comptage",
+    "resultat": 96,
+    "cypher": "MATCH (i:IncidentSecu)-[:EN_PHASE_DE_VOL]->(:PhaseVol {label:'Décollage'}) MATCH (i)-[:IMPLIQUE_COMPAGNIE]->(:Compagnie {nom:'EASYJET'}) RETURN count(DISTINCT i) AS n"
+   }
+  },
+  {
+   "id": "FG01",
+   "question": "Quelle compagnie a le plus d'incidents ?",
+   "categorie": "argmax",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "mention",
+    "resultat": "EASYJET",
+    "cypher": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) RETURN c.nom AS v, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1"
+   }
+  },
+  {
+   "id": "FG02",
+   "question": "Quelle est la phase de vol la plus fréquente ?",
+   "categorie": "argmax",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "mention",
+    "resultat": "Stationnement",
+    "cypher": "MATCH (i:IncidentSecu)-[:EN_PHASE_DE_VOL]->(p:PhaseVol) RETURN p.label AS v, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1"
+   }
+  },
+  {
+   "id": "FG03",
+   "question": "Quel type d'événement est le plus fréquent sur la piste ?",
+   "categorie": "argmax",
+   "voie_attendue": "agregation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "mention",
+    "resultat": "Collision aviaire",
+    "cypher": "MATCH (i:IncidentSecu)-[:LOCALISE_EN]->(:Lieu {label:'Piste'}) MATCH (i)-[:DE_TYPE]->(t:TypeEvenement) RETURN t.label AS v, count(DISTINCT i) AS n ORDER BY n DESC LIMIT 1"
+   }
+  },
+  {
+   "id": "FR01",
+   "question": "Des incidents de baisse de niveau SSLIA ?",
+   "categorie": "routeur-robustesse",
+   "voie_attendue": "recherche",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "routage",
+    "resultat": null
+   }
+  },
+  {
+   "id": "FR02",
+   "question": "Un passager fume pendant l'embarquement, quelles mesures ?",
+   "categorie": "routeur-robustesse",
+   "voie_attendue": "recommandation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "routage",
+    "resultat": null
+   }
+  },
+  {
+   "id": "FR03",
+   "question": "Collision aviaire au décollage, quelles actions préventives ?",
+   "categorie": "routeur-robustesse",
+   "voie_attendue": "recommandation",
+   "genere": false,
+   "verite_terrain": {
+    "eval": "routage",
+    "resultat": null
+   }
+  }
+ ]
+}

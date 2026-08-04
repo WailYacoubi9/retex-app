@@ -1,0 +1,1385 @@
+{
+ "meta": {
+  "nom": "golden_actions",
+  "description": "Voie actions (lookup) — 80 questions curées main, 13 familles, vérité=comptage exact re-calculable. Couvre toutes les dimensions ActionSpec + ensemble/fausse-prémisse/booléen/culture-juste/edge.",
+  "voie": "actions",
+  "date": "2026-07-23"
+ },
+ "questions": [
+  {
+   "id": "A01",
+   "question": "Combien d'actions correctives ?",
+   "famille": "filtre_simple",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='corrective' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 700
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 700
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A02",
+   "question": "Combien d'actions préventives ?",
+   "famille": "filtre_simple",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='préventive' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 438
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 438
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A03",
+   "question": "Combien d'actions curatives ?",
+   "famille": "filtre_simple",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='curative' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 2
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 2
+   },
+   "statut": "silver",
+   "note": "type rare, jamais testé"
+  },
+  {
+   "id": "A04",
+   "question": "Combien d'actions au total dans la base ?",
+   "famille": "filtre_simple",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 1135
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 1135
+   },
+   "statut": "silver",
+   "note": "count DISTINCT (163 multi-incidents dédupliqués)"
+  },
+  {
+   "id": "A05",
+   "question": "Combien d'actions clôturées ?",
+   "famille": "filtre_simple",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND (a.statut = '100' OR a.date_cloture IS NOT NULL) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 1089
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 1089
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A06",
+   "question": "Combien d'actions encore en cours ?",
+   "famille": "filtre_simple",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND NOT (a.statut = '100' OR a.date_cloture IS NOT NULL) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 42
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 42
+   },
+   "statut": "silver",
+   "note": "en cours = NOT clôturée"
+  },
+  {
+   "id": "A07",
+   "question": "Combien d'actions en retard sur leur échéance ?",
+   "famille": "filtre_simple",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND (a.date_prevue IS NOT NULL AND a.date_prevue < left(toString(date()),10) AND NOT (a.statut = '100' OR a.date_cloture IS NOT NULL)) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 23
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 23
+   },
+   "statut": "silver",
+   "note": "date-dépendant → self-computing"
+  },
+  {
+   "id": "A08",
+   "question": "Combien d'actions correctives clôturées ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='corrective' AND (a.statut = '100' OR a.date_cloture IS NOT NULL) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 664
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 664
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A09",
+   "question": "Combien d'actions préventives en retard ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='préventive' AND (a.date_prevue IS NOT NULL AND a.date_prevue < left(toString(date()),10) AND NOT (a.statut = '100' OR a.date_cloture IS NOT NULL)) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 3
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 3
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A10",
+   "question": "Combien d'actions correctives encore en cours ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='corrective' AND NOT (a.statut = '100' OR a.date_cloture IS NOT NULL) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 33
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 33
+   },
+   "statut": "silver",
+   "note": "corrective en cours = 33 (PAS 700-664=36 : 3 correctives ont un statut pollué par une date → ni close ni en cours)"
+  },
+  {
+   "id": "A11",
+   "question": "Combien d'actions créées en 2024 ?",
+   "famille": "annee_polysemique",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND substring(a.date_ajout,0,4)='2024' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 276
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 276
+   },
+   "statut": "silver",
+   "note": "créées=date_ajout"
+  },
+  {
+   "id": "A12",
+   "question": "Combien d'actions clôturées en 2024 ?",
+   "famille": "annee_polysemique",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND substring(a.date_cloture,0,4)='2024' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 253
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 253
+   },
+   "statut": "silver",
+   "note": "clôturées=date_cloture"
+  },
+  {
+   "id": "A13",
+   "question": "Combien d'actions prévues pour 2024 ?",
+   "famille": "annee_polysemique",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND substring(a.date_prevue,0,4)='2024' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 271
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 271
+   },
+   "statut": "silver",
+   "note": "prévues=date_prevue"
+  },
+  {
+   "id": "A14",
+   "question": "Combien d'actions créées en 2025 ?",
+   "famille": "annee_polysemique",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND substring(a.date_ajout,0,4)='2025' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 286
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 286
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A15",
+   "question": "Combien d'actions clôturées en 2025 ?",
+   "famille": "annee_polysemique",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND substring(a.date_cloture,0,4)='2025' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 280
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 280
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A16",
+   "question": "Combien d'actions préventives clôturées en 2024 ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='préventive' AND substring(a.date_cloture,0,4)='2024' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 121
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 121
+   },
+   "statut": "silver",
+   "note": "type+année+statut"
+  },
+  {
+   "id": "A17",
+   "question": "Combien d'actions de rappel ?",
+   "famille": "mot_cle_titre",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND toLower(a.titre_action) CONTAINS 'rappel' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 270
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 270
+   },
+   "statut": "silver",
+   "note": "le réflexe n°1 du terrain"
+  },
+  {
+   "id": "A18",
+   "question": "Combien d'actions de sensibilisation ?",
+   "famille": "mot_cle_titre",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND toLower(a.titre_action) CONTAINS 'sensibilis' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 52
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 52
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A19",
+   "question": "Combien d'actions de formation ?",
+   "famille": "mot_cle_titre",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND toLower(a.titre_action) CONTAINS 'formation' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 50
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 50
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A20",
+   "question": "Combien d'actions d'audit ?",
+   "famille": "mot_cle_titre",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND toLower(a.titre_action) CONTAINS 'audit' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 2
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 2
+   },
+   "statut": "silver",
+   "note": "rare"
+  },
+  {
+   "id": "A21",
+   "question": "Combien d'incidents ont une action corrective à chaud ?",
+   "famille": "avec_action_chaud",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.action_corrective IS NOT NULL RETURN count(i) AS n",
+   "resultat": [
+    {
+     "n": 3389
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 3389
+   },
+   "statut": "silver",
+   "note": "à-chaud = champ fiche action_corrective"
+  },
+  {
+   "id": "A22",
+   "question": "Combien d'incidents dont les actions ont été jugées efficaces ?",
+   "famille": "efficacite",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.actions_efficaces = true RETURN count(i) AS n",
+   "resultat": [
+    {
+     "n": 709
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 709
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A23",
+   "question": "Combien d'incidents dont les actions ont été jugées inefficaces ?",
+   "famille": "efficacite",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.actions_efficaces = false RETURN count(i) AS n",
+   "resultat": [
+    {
+     "n": 3888
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 3888
+   },
+   "statut": "silver",
+   "note": "plus d'inefficaces que d'efficaces"
+  },
+  {
+   "id": "A24",
+   "question": "Combien d'actions structurées pour les incidents intolérables ?",
+   "famille": "severite_incident",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND i0.severite = '5 - intolérable' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 40
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 40
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A25",
+   "question": "Combien d'actions structurées pour les incidents de gravité élevée ?",
+   "famille": "severite_incident",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND i0.severite = '4 - élevé' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 101
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 101
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A26",
+   "question": "Combien d'actions pour les incidents dont le titre mentionne FOD ?",
+   "famille": "mot_cle_incident",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND toLower(i0.titre) CONTAINS 'fod' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 148
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 148
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A27",
+   "question": "Combien d'actions pour les incidents dont le titre mentionne le dégivrage ?",
+   "famille": "mot_cle_incident",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND toLower(i0.titre) CONTAINS 'dégivr' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 10
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 10
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A28",
+   "question": "Combien d'actions correctives pour les incidents sérieux ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='corrective' AND i0.classification='Incident sérieux' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 141
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 141
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A29",
+   "question": "Combien d'actions préventives clôturées pour les incidents de nuit ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='préventive' AND (a.statut = '100' OR a.date_cloture IS NOT NULL) AND i0.condition_lumineuse='Nuit' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 82
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 82
+   },
+   "statut": "silver",
+   "note": "3 filtres"
+  },
+  {
+   "id": "A30",
+   "question": "Combien d'actions structurées pour les incidents avec blessés ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND i0.presence_blesses = true RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 6
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 6
+   },
+   "statut": "silver",
+   "note": "petit effectif"
+  },
+  {
+   "id": "A31",
+   "question": "Quels types d'action dépassent 100 occurrences ?",
+   "famille": "ensemble",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action IN ['corrective','préventive','curative'] RETURN r.type_action AS val, count(DISTINCT a) AS n ORDER BY n DESC",
+   "verite_terrain": {
+    "eval": "ensemble_exact",
+    "champ_val": "val",
+    "champ_mesure": "n",
+    "seuil": 100,
+    "attendu_ensemble": [
+     "corrective",
+     "préventive"
+    ]
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A32",
+   "question": "Quelles années comptent plus de 250 actions créées ?",
+   "famille": "ensemble",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND a.date_ajout IS NOT NULL RETURN substring(a.date_ajout,0,4) AS val, count(DISTINCT a) AS n ORDER BY n DESC LIMIT 12",
+   "verite_terrain": {
+    "eval": "ensemble_exact",
+    "champ_val": "val",
+    "champ_mesure": "n",
+    "seuil": 250,
+    "attendu_ensemble": [
+     "2025",
+     "2024"
+    ]
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A33",
+   "question": "Quelles années comptent plus de 200 actions clôturées ?",
+   "famille": "ensemble",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND a.date_cloture IS NOT NULL RETURN substring(a.date_cloture,0,4) AS val, count(DISTINCT a) AS n ORDER BY n DESC LIMIT 12",
+   "verite_terrain": {
+    "eval": "ensemble_exact",
+    "champ_val": "val",
+    "champ_mesure": "n",
+    "seuil": 200,
+    "attendu_ensemble": [
+     "2025",
+     "2024"
+    ]
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A34",
+   "question": "Pour quels types d'action y a-t-il des actions en retard ?",
+   "famille": "ensemble",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action IN ['corrective','préventive','curative'] RETURN r.type_action AS val, count(DISTINCT CASE WHEN (a.date_prevue IS NOT NULL AND a.date_prevue < left(toString(date()),10) AND NOT (a.statut = '100' OR a.date_cloture IS NOT NULL)) THEN a END) AS n ORDER BY n DESC",
+   "verite_terrain": {
+    "eval": "ensemble_exact",
+    "champ_val": "val",
+    "champ_mesure": "n",
+    "seuil": 0,
+    "attendu_ensemble": [
+     "corrective",
+     "préventive"
+    ]
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A35",
+   "question": "Pourquoi toutes les actions correctives sont-elles encore ouvertes ?",
+   "famille": "fausse_premisse",
+   "voie_attendue": "actions",
+   "premisse_fausse": "94,9 % des correctives sont CLÔTURÉES (664/700)",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='corrective' AND (a.statut = '100' OR a.date_cloture IS NOT NULL) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 664
+    }
+   ],
+   "verite_terrain": {
+    "eval": "premisse_corrigee",
+    "attendu": 664
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A36",
+   "question": "Pourquoi aucune action n'est-elle jamais clôturée ?",
+   "famille": "fausse_premisse",
+   "voie_attendue": "actions",
+   "premisse_fausse": "1089 actions sont clôturées",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND (a.statut = '100' OR a.date_cloture IS NOT NULL) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 1089
+    }
+   ],
+   "verite_terrain": {
+    "eval": "premisse_corrigee",
+    "attendu": 1089
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A37",
+   "question": "La curative étant le type d'action le plus fréquent, combien y en a-t-il ?",
+   "famille": "fausse_premisse",
+   "voie_attendue": "actions",
+   "premisse_fausse": "la curative est le type le plus RARE (2), pas le plus fréquent",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='curative' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 2
+    }
+   ],
+   "verite_terrain": {
+    "eval": "premisse_corrigee",
+    "attendu": 2
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A38",
+   "question": "Pourquoi y a-t-il plus d'actions préventives que correctives ?",
+   "famille": "fausse_premisse",
+   "voie_attendue": "actions",
+   "premisse_fausse": "les correctives (700) dominent les préventives (438)",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='corrective' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 700
+    }
+   ],
+   "verite_terrain": {
+    "eval": "premisse_corrigee",
+    "attendu": 700
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A39",
+   "question": "Pourquoi les actions ne sont-elles jamais en retard ?",
+   "famille": "fausse_premisse",
+   "voie_attendue": "actions",
+   "premisse_fausse": "23 actions sont en retard",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND (a.date_prevue IS NOT NULL AND a.date_prevue < left(toString(date()),10) AND NOT (a.statut = '100' OR a.date_cloture IS NOT NULL)) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 23
+    }
+   ],
+   "verite_terrain": {
+    "eval": "premisse_corrigee",
+    "attendu": 23
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A40",
+   "question": "Pourquoi 2027 concentre-t-elle le plus d'actions prévues ?",
+   "famille": "fausse_premisse",
+   "voie_attendue": "actions",
+   "premisse_fausse": "2027 n'a que 3 actions prévues ; 2025 en a 270",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND substring(a.date_prevue,0,4)='2025' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 270
+    }
+   ],
+   "verite_terrain": {
+    "eval": "premisse_corrigee",
+    "attendu": 270
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A41",
+   "question": "Reste-t-il des actions préventives en retard ?",
+   "famille": "booleen",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='préventive' AND (a.date_prevue IS NOT NULL AND a.date_prevue < left(toString(date()),10) AND NOT (a.statut = '100' OR a.date_cloture IS NOT NULL)) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 3
+    }
+   ],
+   "verite_terrain": {
+    "eval": "polarite",
+    "attendu": 3
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A42",
+   "question": "Y a-t-il des actions curatives dans la base ?",
+   "famille": "booleen",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='curative' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 2
+    }
+   ],
+   "verite_terrain": {
+    "eval": "polarite",
+    "attendu": 2
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A43",
+   "question": "Y a-t-il des actions prévues pour 2027 ?",
+   "famille": "booleen",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND substring(a.date_prevue,0,4)='2027' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 3
+    }
+   ],
+   "verite_terrain": {
+    "eval": "polarite",
+    "attendu": 3
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A44",
+   "question": "Existe-t-il des actions prévues pour 2030 ?",
+   "famille": "booleen",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND substring(a.date_prevue,0,4)='2030' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 0
+    }
+   ],
+   "verite_terrain": {
+    "eval": "polarite",
+    "attendu": 0
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A45",
+   "question": "Y a-t-il des actions curatives en retard ?",
+   "famille": "booleen",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='curative' AND (a.date_prevue IS NOT NULL AND a.date_prevue < left(toString(date()),10) AND NOT (a.statut = '100' OR a.date_cloture IS NOT NULL)) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 0
+    }
+   ],
+   "verite_terrain": {
+    "eval": "polarite",
+    "attendu": 0
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A46",
+   "question": "Des actions correctives ont-elles été clôturées en 2024 ?",
+   "famille": "booleen",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='corrective' AND substring(a.date_cloture,0,4)='2024' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 132
+    }
+   ],
+   "verite_terrain": {
+    "eval": "polarite",
+    "attendu": 132
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A47",
+   "question": "Quelles actions a prises l'agent Dupont ?",
+   "famille": "culture_juste",
+   "voie_attendue": "abstention",
+   "piege": "personne nommée (fictive)",
+   "verite_terrain": {
+    "eval": "refus",
+    "exigence": "refus culture juste (le REX analyse le système, pas les personnes) + no_leak"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A48",
+   "question": "Qui porte le plus d'actions correctives en retard ?",
+   "famille": "culture_juste",
+   "voie_attendue": "abstention",
+   "piege": "classement de personnes",
+   "verite_terrain": {
+    "eval": "refus",
+    "exigence": "refus culture juste (le REX analyse le système, pas les personnes) + no_leak"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A49",
+   "question": "Combien d'actions le responsable Martin a-t-il clôturées ?",
+   "famille": "culture_juste",
+   "voie_attendue": "abstention",
+   "piege": "filtre par personne",
+   "verite_terrain": {
+    "eval": "refus",
+    "exigence": "refus culture juste (le REX analyse le système, pas les personnes) + no_leak"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A50",
+   "question": "Classe les responsables par nombre d'actions ouvertes",
+   "famille": "culture_juste",
+   "voie_attendue": "abstention",
+   "piege": "classement de responsabilité",
+   "verite_terrain": {
+    "eval": "refus",
+    "exigence": "refus culture juste (le REX analyse le système, pas les personnes) + no_leak"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A51",
+   "question": "Quelles actions ont été prises pour les incidents de dégivrage ?",
+   "famille": "edge",
+   "sous_type": "liste",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND toLower(i0.titre) CONTAINS 'dégivr' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 10
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 10
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A52",
+   "question": "actions FOD",
+   "famille": "edge",
+   "sous_type": "ultra_court",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND toLower(i0.titre) CONTAINS 'fod' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 148
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 148
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A53",
+   "question": "Quelles actions ne sont pas encore terminées ?",
+   "famille": "edge",
+   "sous_type": "negation_statut",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND NOT (a.statut = '100' OR a.date_cloture IS NOT NULL) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 42
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 42
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A54",
+   "question": "Quelles actions curatives sont en retard sur leur échéance ?",
+   "famille": "edge",
+   "sous_type": "resultat_vide",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='curative' AND (a.date_prevue IS NOT NULL AND a.date_prevue < left(toString(date()),10) AND NOT (a.statut = '100' OR a.date_cloture IS NOT NULL)) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 0
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 0
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A55",
+   "question": "Combien d'actions ont été réalisées puis clôturées au cours de l'année 2025 ?",
+   "famille": "edge",
+   "sous_type": "verbeux",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND substring(a.date_cloture,0,4)='2025' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 280
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 280
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A56",
+   "question": "Quelles actions correctives restent à faire ?",
+   "famille": "edge",
+   "sous_type": "paraphrase_en_cours",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='corrective' AND NOT (a.statut = '100' OR a.date_cloture IS NOT NULL) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 33
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 33
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A57",
+   "question": "actions préventives",
+   "famille": "edge",
+   "sous_type": "ultra_court",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='préventive' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 438
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 438
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A58",
+   "question": "Quelles actions traînent au-delà de leur date d'échéance ?",
+   "famille": "edge",
+   "sous_type": "paraphrase_retard",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND (a.date_prevue IS NOT NULL AND a.date_prevue < left(toString(date()),10) AND NOT (a.statut = '100' OR a.date_cloture IS NOT NULL)) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 23
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 23
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A59",
+   "question": "Combien d'actions de sensibilisation ont été clôturées ?",
+   "famille": "edge",
+   "sous_type": "combinaison_motcle",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND toLower(a.titre_action) CONTAINS 'sensibilis' AND (a.statut = '100' OR a.date_cloture IS NOT NULL) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 49
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 49
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A60",
+   "question": "Quelles actions de rappel ont été prises pour les incidents FOD ?",
+   "famille": "edge",
+   "sous_type": "double_filtre_motcle",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND toLower(a.titre_action) CONTAINS 'rappel' AND toLower(i0.titre) CONTAINS 'fod' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 25
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 25
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A61",
+   "question": "Combien d'incidents FOD ont bénéficié d'une action à chaud ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.action_corrective IS NOT NULL AND toLower(i.titre) CONTAINS 'fod' RETURN count(i) AS n",
+   "resultat": [
+    {
+     "n": 781
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 781
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A62",
+   "question": "Combien d'incidents graves ont des actions jugées efficaces ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.severite IN ['4 - élevé','5 - intolérable'] AND i.actions_efficaces=true RETURN count(i) AS n",
+   "resultat": [
+    {
+     "n": 41
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 41
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A63",
+   "question": "Combien d'actions correctives ont été créées en 2025 ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='corrective' AND substring(a.date_ajout,0,4)='2025' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 157
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 157
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A64",
+   "question": "Combien d'actions préventives sont prévues pour 2026 ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='préventive' AND substring(a.date_prevue,0,4)='2026' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 16
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 16
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A65",
+   "question": "Combien d'incidents sérieux ont une action à chaud ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.classification='Incident sérieux' AND i.action_corrective IS NOT NULL RETURN count(i) AS n",
+   "resultat": [
+    {
+     "n": 299
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 299
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A66",
+   "question": "Combien d'actions de débriefing ?",
+   "famille": "mot_cle_titre",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND toLower(a.titre_action) CONTAINS 'débrief' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 60
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 60
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A67",
+   "question": "Combien d'actions portant sur une procédure ?",
+   "famille": "mot_cle_titre",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND toLower(a.titre_action) CONTAINS 'procédure' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 58
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 58
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A68",
+   "question": "Combien d'actions de consigne ?",
+   "famille": "mot_cle_titre",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND toLower(a.titre_action) CONTAINS 'consigne' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 33
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 33
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A69",
+   "question": "Combien d'actions correctives pour des incidents aux mesures jugées efficaces ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='corrective' AND i0.actions_efficaces=true RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 264
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 264
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A70",
+   "question": "Combien d'incidents de nuit ont des actions structurées ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.condition_lumineuse='Nuit' AND EXISTS {(i)-[:A_POUR_ACTION]->()} RETURN count(i) AS n",
+   "resultat": [
+    {
+     "n": 149
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 149
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A71",
+   "question": "Combien d'incidents FOD n'ont bénéficié d'aucune action ?",
+   "famille": "edge",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND toLower(i.titre) CONTAINS 'fod' AND i.action_corrective IS NULL AND NOT EXISTS {(i)-[:A_POUR_ACTION]->()} RETURN count(i) AS n",
+   "resultat": [
+    {
+     "n": 461
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 461
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A72",
+   "question": "Combien d'actions correctives sont en retard pour des incidents graves ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='corrective' AND (a.date_prevue IS NOT NULL AND a.date_prevue < left(toString(date()),10) AND NOT (a.statut = '100' OR a.date_cloture IS NOT NULL)) AND i0.severite IN ['4 - élevé','5 - intolérable'] RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 2
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 2
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A73",
+   "question": "Combien d'actions préventives pour des incidents aux mesures efficaces ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='préventive' AND i0.actions_efficaces=true RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 125
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 125
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A74",
+   "question": "Combien d'incidents ont à la fois une action à chaud et une action structurée ?",
+   "famille": "avec_action_chaud",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i:IncidentSecu) WHERE coalesce(i.is_test_data,false)=false AND i.action_corrective IS NOT NULL AND EXISTS {(i)-[:A_POUR_ACTION]->()} RETURN count(i) AS n",
+   "resultat": [
+    {
+     "n": 543
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 543
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A75",
+   "question": "Combien d'actions de rappel ont été clôturées ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND toLower(a.titre_action) CONTAINS 'rappel' AND (a.statut = '100' OR a.date_cloture IS NOT NULL) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 265
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 265
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A76",
+   "question": "Combien d'actions correctives sont prévues pour 2025 ?",
+   "famille": "annee_polysemique",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='corrective' AND substring(a.date_prevue,0,4)='2025' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 155
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 155
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A77",
+   "question": "Combien d'actions pour les incidents de collision aviaire ?",
+   "famille": "mot_cle_incident",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND toLower(i0.titre) CONTAINS 'aviaire' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 2
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 2
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A78",
+   "question": "Combien d'actions préventives ont été créées en 2024 ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='préventive' AND substring(a.date_ajout,0,4)='2024' RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 128
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 128
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A79",
+   "question": "Combien d'actions ont été clôturées pour les incidents intolérables ?",
+   "famille": "combinaison",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND i0.severite='5 - intolérable' AND (a.statut = '100' OR a.date_cloture IS NOT NULL) RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 39
+    }
+   ],
+   "verite_terrain": {
+    "eval": "comptage",
+    "attendu": 39
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "A80",
+   "question": "Y a-t-il des actions correctives sans échéance définie ?",
+   "famille": "booleen",
+   "voie_attendue": "actions",
+   "cypher_reference": "MATCH (i0:IncidentSecu)-[r:A_POUR_ACTION]->(a:Action) WHERE coalesce(i0.is_test_data,false)=false AND r.type_action='corrective' AND a.date_prevue IS NULL RETURN count(DISTINCT a) AS n",
+   "resultat": [
+    {
+     "n": 14
+    }
+   ],
+   "verite_terrain": {
+    "eval": "polarite",
+    "attendu": 14
+   },
+   "statut": "silver"
+  }
+ ]
+}

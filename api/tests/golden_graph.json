@@ -1,0 +1,287 @@
+{
+ "meta": {
+  "titre": "Questions de traversée graphe (chemins réels, étoile)",
+  "n": 10
+ },
+ "questions": [
+  {
+   "niveau": "1-2hop-chaine",
+   "question": "Qui a traité le plus d'actions liées à des incidents de collision aviaire ?",
+   "verite_terrain": {
+    "cypher": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(:TypeEvenement {label:'Collision aviaire'}) MATCH (i)-[:A_POUR_ACTION]->(a:Action)-[:ACTION_PAR]->(p:Personne) RETURN p.login AS v, count(a) AS n ORDER BY n DESC LIMIT 3",
+    "resultat": [
+     {
+      "v": "agent086",
+      "n": 1
+     }
+    ]
+   },
+   "note_remap": "remplace 'panne moteur'(cause texte) par un TypeEvenement réel",
+   "genere": false,
+   "voie_attendue": "query-graph"
+  },
+  {
+   "niveau": "1-2hop-chaine",
+   "question": "Combien d'actions correctives sont rattachées à des incidents FOD ?",
+   "verite_terrain": {
+    "cypher": "MATCH (i:IncidentSecu)-[:DE_TYPE]->(:TypeEvenement {label:'FOD'}) MATCH (i)-[:A_POUR_ACTION]->(a:Action {type_action:'corrective'}) RETURN count(a) AS n",
+    "resultat": 125
+   },
+   "note_remap": "",
+   "genere": false,
+   "voie_attendue": "query-graph"
+  },
+  {
+   "niveau": "2-2hop-filtre",
+   "question": "Combien d'incidents impliquant EasyJet sont de sévérité « 4 - élevé » ?",
+   "verite_terrain": {
+    "cypher": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) WHERE toLower(c.nom) CONTAINS 'easyjet' AND i.severite='4 - élevé' RETURN count(DISTINCT i) AS n",
+    "resultat": 31
+   },
+   "note_remap": "remplace 'état d'alerte'(texte) par severite (champ structuré)",
+   "genere": false,
+   "voie_attendue": "query-graph"
+  },
+  {
+   "niveau": "2-2hop-filtre",
+   "question": "Combien d'incidents Air France impliquent aussi une phase de décollage ?",
+   "verite_terrain": {
+    "cypher": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) WHERE toLower(c.nom) CONTAINS 'air france' MATCH (i)-[:EN_PHASE_DE_VOL]->(:PhaseVol {label:'Décollage'}) RETURN count(DISTINCT i) AS n",
+    "resultat": 19
+   },
+   "note_remap": "",
+   "genere": false,
+   "voie_attendue": "query-graph"
+  },
+  {
+   "niveau": "3-agregation-traversee",
+   "question": "Combien de types d'événement distincts par lieu ?",
+   "verite_terrain": {
+    "cypher": "MATCH (l:Lieu)<-[:LOCALISE_EN]-(i:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement) RETURN l.label AS v, count(DISTINCT t) AS n ORDER BY n DESC",
+    "resultat": [
+     {
+      "v": "Piste",
+      "n": 27
+     },
+     {
+      "v": "Parking avions",
+      "n": 27
+     },
+     {
+      "v": "Aire de trafic",
+      "n": 24
+     },
+     {
+      "v": "Voie de circulation avions",
+      "n": 23
+     },
+     {
+      "v": "Autre",
+      "n": 18
+     },
+     {
+      "v": "Route de service",
+      "n": 14
+     },
+     {
+      "v": "Proximité aérodrome",
+      "n": 8
+     }
+    ]
+   },
+   "note_remap": "remplace 'especes par piste' par TypeEvenement par Lieu (memes noeuds reels)",
+   "genere": false,
+   "voie_attendue": "query-graph"
+  },
+  {
+   "niveau": "3-agregation-traversee",
+   "question": "Répartition des incidents EasyJet par phase de vol",
+   "verite_terrain": {
+    "cypher": "MATCH (i:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c:Compagnie) WHERE toLower(c.nom) CONTAINS 'easyjet' MATCH (i)-[:EN_PHASE_DE_VOL]->(pv:PhaseVol) RETURN pv.label AS v, count(DISTINCT i) AS n ORDER BY n DESC",
+    "resultat": [
+     {
+      "v": "Atterrissage",
+      "n": 99
+     },
+     {
+      "v": "Stationnement",
+      "n": 96
+     },
+     {
+      "v": "Décollage",
+      "n": 96
+     },
+     {
+      "v": "Roulage",
+      "n": 54
+     },
+     {
+      "v": "Tractage",
+      "n": 49
+     },
+     {
+      "v": "Approche",
+      "n": 17
+     },
+     {
+      "v": "Manoeuvre",
+      "n": 8
+     },
+     {
+      "v": "Inconnu",
+      "n": 6
+     }
+    ]
+   },
+   "note_remap": "",
+   "genere": false,
+   "voie_attendue": "query-graph"
+  },
+  {
+   "niveau": "4-3hop",
+   "question": "Quelles compagnies partagent au moins un type d'événement avec Air France ? (top 5 par nb de types communs)",
+   "verite_terrain": {
+    "cypher": "MATCH (:Compagnie {nom:'AIR France'})<-[:IMPLIQUE_COMPAGNIE]-(:IncidentSecu)-[:DE_TYPE]->(t:TypeEvenement)<-[:DE_TYPE]-(:IncidentSecu)-[:IMPLIQUE_COMPAGNIE]->(c2:Compagnie) WHERE c2.nom <> 'AIR France' RETURN c2.nom AS v, count(DISTINCT t) AS n ORDER BY n DESC LIMIT 5",
+    "resultat": [
+     {
+      "v": "EASYJET",
+      "n": 21
+     },
+     {
+      "v": "TRANSAVIA",
+      "n": 18
+     },
+     {
+      "v": "HOP!",
+      "n": 17
+     },
+     {
+      "v": "VOLOTEA",
+      "n": 15
+     },
+     {
+      "v": "AIR ALGERIE",
+      "n": 14
+     }
+    ]
+   },
+   "note_remap": "3-hop authentique a travers le noeud central + satellite TypeEvenement",
+   "genere": false,
+   "voie_attendue": "query-graph"
+  },
+  {
+   "niveau": "4-3hop",
+   "question": "Quelles personnes traitent les actions des incidents impliquant EasyJet ? (3-hop Compagnie->Incident->Action->Personne)",
+   "verite_terrain": {
+    "cypher": "MATCH (c:Compagnie)<-[:IMPLIQUE_COMPAGNIE]-(i:IncidentSecu) WHERE toLower(c.nom) CONTAINS 'easyjet' MATCH (i)-[:A_POUR_ACTION]->(a:Action)-[:ACTION_PAR]->(p:Personne) RETURN p.login AS v, count(a) AS n ORDER BY n DESC LIMIT 5",
+    "resultat": [
+     {
+      "v": "agent033",
+      "n": 26
+     },
+     {
+      "v": "agent055",
+      "n": 9
+     },
+     {
+      "v": "agent115",
+      "n": 9
+     },
+     {
+      "v": "agent086",
+      "n": 9
+     },
+     {
+      "v": "agent127",
+      "n": 8
+     }
+    ]
+   },
+   "note_remap": "3-hop reel Compagnie->Incident->Action->Personne",
+   "genere": false,
+   "voie_attendue": "query-graph"
+  },
+  {
+   "niveau": "5-comparaison",
+   "question": "Aviapartner et Alyzia interviennent-ils sur les mêmes lieux ? (variantes de casse agrégées)",
+   "verite_terrain": {
+    "cypher": "MATCH (e:Entite)<-[:MIS_EN_CAUSE]-(i:IncidentSecu)-[:LOCALISE_EN]->(l:Lieu) WITH (CASE WHEN toLower(e.nom) CONTAINS 'aviapartner' THEN 'Aviapartner' WHEN toLower(e.nom) CONTAINS 'alyzia' THEN 'Alyzia' ELSE null END) AS acteur, l.label AS lieu, count(DISTINCT i) AS n WHERE acteur IS NOT NULL RETURN acteur, lieu, n ORDER BY acteur, n DESC",
+    "resultat": [
+     {
+      "acteur": "Alyzia",
+      "lieu": "Parking avions",
+      "n": 104
+     },
+     {
+      "acteur": "Alyzia",
+      "lieu": "Aire de trafic",
+      "n": 16
+     },
+     {
+      "acteur": "Alyzia",
+      "lieu": "Route de service",
+      "n": 2
+     },
+     {
+      "acteur": "Alyzia",
+      "lieu": "Autre",
+      "n": 2
+     },
+     {
+      "acteur": "Alyzia",
+      "lieu": "Voie de circulation avions",
+      "n": 2
+     },
+     {
+      "acteur": "Aviapartner",
+      "lieu": "Parking avions",
+      "n": 139
+     },
+     {
+      "acteur": "Aviapartner",
+      "lieu": "Aire de trafic",
+      "n": 30
+     },
+     {
+      "acteur": "Aviapartner",
+      "lieu": "Voie de circulation avions",
+      "n": 9
+     },
+     {
+      "acteur": "Aviapartner",
+      "lieu": "Route de service",
+      "n": 3
+     },
+     {
+      "acteur": "Aviapartner",
+      "lieu": "Piste",
+      "n": 2
+     }
+    ]
+   },
+   "note_remap": "exige d'agreger les variantes de casse (bug 3) - faucons/corneilles impossible (texte)",
+   "genere": false,
+   "voie_attendue": "query-graph"
+  },
+  {
+   "niveau": "6-temporel-relationnel",
+   "question": "Quels types d'action sur les incidents en piste entre 2023 et 2025 ?",
+   "verite_terrain": {
+    "cypher": "MATCH (i:IncidentSecu)-[:LOCALISE_EN]->(:Lieu {label:'Piste'}) WHERE substring(i.date_evenement,0,4) IN ['2023','2024','2025'] MATCH (i)-[:A_POUR_ACTION]->(a:Action) RETURN a.type_action AS v, count(a) AS n ORDER BY n DESC",
+    "resultat": [
+     {
+      "v": "corrective",
+      "n": 35
+     },
+     {
+      "v": "préventive",
+      "n": 8
+     }
+    ]
+   },
+   "note_remap": "'17L'(texte) coarse -> Lieu='Piste'; jointure Action + filtre date reel",
+   "genere": false,
+   "voie_attendue": "query-graph"
+  }
+ ]
+}

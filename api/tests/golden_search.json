@@ -1,0 +1,108 @@
+{
+ "meta": {
+  "nom": "golden_search",
+  "description": "Golden voie RECHERCHE SÉMANTIQUE (RAG Q&A) — S1-S5 ciblent les FAUX POSITIFS (dérive vers un concept adjacent) ; S6-S8 ciblent les VRAIS NÉGATIFS (questions hors-domaine → abstention attendue). Comparaison dense pur vs hybride+reranker (top 8, plancher d'abstention 0.10).",
+  "protocole": "S1-S5 : compter les faux positifs par version. S6-S8 : le système doit S'ABSTENIR (0 fiche) — dense force des fiches, hybride+reranker s'abstient.",
+  "date": "2026-07-28"
+ },
+ "questions": [
+  {
+   "id": "S1",
+   "question": "déversement de carburant pendant l'avitaillement d'un avion",
+   "sujet_pertinent": "épandage / fuite de carburant ou kérosène, idéalement lors de l'avitaillement",
+   "piege_faux_positif": "autre liquide (huile, hydraulique), incendie/dégagements de la zone avitaillement, simple passage de véhicule",
+   "faux_positifs": {
+    "dense": ["FNE-2008ADL948 (fuite d'huile)", "FNE/17/0061 (fuite hydraulique)", "FNE/22/0394 (passage véhicule au refoulement)"],
+    "hybride_reranker": []
+   },
+   "verdict": "hybride 0 FP (8/8 kérosène/carburant) vs dense 3 FP",
+   "statut": "silver",
+   "famille": "recherche"
+  },
+  {
+   "id": "S2",
+   "question": "de la fumée est apparue dans le cockpit d'un avion en vol",
+   "sujet_pertinent": "fumée / odeur de brûlé dans le cockpit ou à bord de l'aéronef",
+   "piege_faux_positif": "fumée de MOTEUR (pas cockpit), fumée/feu au sol, fumée de véhicule ou de bâtiment",
+   "faux_positifs": {
+    "dense": ["FNE/20/0266 (fumée moteur)", "FNE/23/0627 (fumée anormale moteur)"],
+    "hybride_reranker": []
+   },
+   "verdict": "hybride 0 FP (8/8 cockpit/à bord) vs dense 2 FP (dérive moteur)",
+   "statut": "silver",
+   "famille": "recherche"
+  },
+  {
+   "id": "S3",
+   "question": "un oiseau a été ingéré par le réacteur au décollage",
+   "sujet_pertinent": "collision / ingestion aviaire (péril animalier), idéalement au décollage",
+   "piege_faux_positif": "collision générique non-aviaire",
+   "faux_positifs": {
+    "dense": [],
+    "hybride_reranker": []
+   },
+   "verdict": "égalité : les deux ne remontent que des collisions aviaires (0 FP). Nuance : aucune ne cible spécifiquement l'« ingestion réacteur », les deux renvoient des collisions aviaires générales.",
+   "statut": "silver",
+   "famille": "recherche"
+  },
+  {
+   "id": "S4",
+   "question": "une personne non autorisée a pénétré à pied sur l'aire de manœuvre",
+   "sujet_pertinent": "intrusion d'une PERSONNE / piéton (non autorisé) sur une aire",
+   "piege_faux_positif": "incursion de VÉHICULE/engin (pas une personne), FOD, et surtout tout sujet sans rapport (ex. laser)",
+   "faux_positifs": {
+    "dense": ["FNE/24/0803 (Attaque laser — hors-sujet total, classé 3e)", "FNE/25/0120 (incursion véhicule)"],
+    "hybride_reranker": ["FNE/25/0305 (FOD non aéronautique)", "FNE/25/0120 (incursion véhicule)"]
+   },
+   "verdict": "les deux ~2 FP, MAIS le hybride supprime le pire (le laser) et remonte en tête les vrais cas « personnes à pied » / « piéton ».",
+   "statut": "silver",
+   "famille": "recherche"
+  },
+  {
+   "id": "S5",
+   "question": "un chariot à bagages a heurté le fuselage de l'avion",
+   "sujet_pertinent": "collision / accrochage d'un chariot ou tapis à bagages avec l'aéronef",
+   "piege_faux_positif": "chariot simplement stationné (pas de choc), collision d'un AUTRE engin (escabeau, véhicule générique), encombrement de zone",
+   "faux_positifs": {
+    "dense": ["FNE-2011ADL0053 (chariot stationné, pas de choc)", "FNE-2017ADL082 (collision entre véhicules)"],
+    "hybride_reranker": ["FNE/24/0717 (collision escabeau, autre engin)", "FNE/23/0204 (encombrement ZEP par chariots)"]
+   },
+   "verdict": "égalité : 1-2 FP chacun ; les deux retrouvent bien le cœur « collision chariot bagages ↔ aéronef ».",
+   "statut": "silver",
+   "famille": "recherche"
+  },
+  {
+   "id": "S6",
+   "question": "un tsunami a inondé les pistes de l'aéroport",
+   "famille": "hors_domaine",
+   "attendu": "abstention (vrai négatif) — aucun cas comparable dans la base",
+   "comportement": {
+    "dense_actuel": "force des fiches (aucune abstention, cosinus > 0.45) → faux positifs",
+    "hybride_reranker": "s'abstient (top rerank 0.005 < seuil 0.10) → « aucun cas comparable » ✓"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "S7",
+   "question": "une cyberattaque a paralysé la tour de contrôle",
+   "famille": "hors_domaine",
+   "attendu": "abstention (vrai négatif)",
+   "comportement": {
+    "dense_actuel": "force des fiches → faux positifs",
+    "hybride_reranker": "s'abstient (top rerank 0.011) ✓"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "S8",
+   "question": "une éruption volcanique a recouvert le tarmac de cendres",
+   "famille": "hors_domaine",
+   "attendu": "abstention (vrai négatif)",
+   "comportement": {
+    "dense_actuel": "force des fiches → faux positifs",
+    "hybride_reranker": "s'abstient (top rerank 0.004) ✓"
+   },
+   "statut": "silver"
+  }
+ ]
+}

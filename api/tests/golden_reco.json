@@ -1,0 +1,1166 @@
+{
+ "meta": {
+  "nom": "golden_reco",
+  "description": "Golden voie recommandation — 86 questions, familles : similarite 40, sans_precedent 10, muet 10, edge 10, culture_juste 6, specifique 4, consensus 6.",
+  "protocole": "retrieval only ; génération jugée via triplets",
+  "date": "2026-07-23"
+ },
+ "questions": [
+  {
+   "id": "R01",
+   "fe_source": "FNE/24/0671",
+   "description": "À l'heure du décollage d'un avion, j'ai constaté que de l'équipement Avia était placé sous la passerelle. Après avoir signalé le problème, nous avons rapidement déplacé les matériaux à 5h43 pour assurer un retrait sécurisé de la passerelle.",
+   "actions_attendues": [
+    "Diffusion d'une note"
+   ],
+   "actions_acceptables": [
+    "Diffusion d'une note",
+    "Note de rappel stationnement GSE",
+    "Réorganisation de l'équipe AVIAPARTNER",
+    "rappel aux équipes",
+    "Debriefing avec l'agent ayant manipulé la passerelle"
+   ],
+   "expected_incidents": [
+    "FNE/24/0671",
+    "FNE/23/0059",
+    "FNE/23/0401",
+    "FNE/23/0673",
+    "FNE/23/0098"
+   ],
+   "type_source": "Mauvaise utilisation des matériels de piste (stationnement)",
+   "note_enrichissement": "voisinage dense même type (cluster Encombrement ZEP/ZEC/passerelle) ; actions du voisinage peu documentées (fragmentées)",
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R02",
+   "fe_source": "FNE/24/0426",
+   "description": "Vers 20h22, un engin de maintenance a pénétré les zones réservées à la piste 17L alors qu'un avion approchait pour atterrir. Le contrôleur a immédiatement demandé au véhicule de se retirer, et l'agent a commencé à reculer.",
+   "actions_attendues": [
+    "Mettre en place une alerte sonore dans VL à 100m des servitudes"
+   ],
+   "actions_acceptables": [
+    "Mettre en place une alerte sonore dans VL à 100m des servitudes",
+    "Note de service",
+    "Entretien avec la hiérarchie et partage de l'incident pour sensibilisation",
+    "Refresh formation",
+    "Test en situation avec SNA",
+    "Réflexion sur méthode de travail"
+   ],
+   "expected_incidents": [
+    "FNE/24/0426",
+    "FNE/24/0316",
+    "FNE/25/0033"
+   ],
+   "type_source": "Incursion sur piste ou voie de circulation",
+   "note_enrichissement": "la fiche source porte 5 actions réelles (le golden n'en gardait qu'1) ; voisins même type FNE/24/0316 et FNE/25/0033",
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R03",
+   "fe_source": "FNE/23/0346",
+   "description": "Un engin de sécurité et un tractomoteur se sont heurtés sur les allées proches du parking P3 lors d'un virage, provoquant des blessures mineures à quatre personnes. Des débris ont été produits par l'impact et nettoyés après l'événement.",
+   "actions_attendues": [
+    "RETEX SSLIA"
+   ],
+   "actions_acceptables": [
+    "RETEX SSLIA",
+    "Balayage / nettoyage des débris",
+    "Débriefing avec l'agent concerné + refresh formation"
+   ],
+   "expected_incidents": [
+    "FNE/23/0346",
+    "FNE/25/0126",
+    "FNE/26/0006"
+   ],
+   "type_source": "Autre, précisez :",
+   "note_enrichissement": "voisinage rare : le retrieval ne remonte que la source ; le jumeau FNE/25/0126 « Collision entre véhicules » a été trouvé par mots-clés (RECALL MISS) → anti-invention critique",
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R04",
+   "fe_source": "FNE/26/0228",
+   "description": "Un employé s'est de nouveau introduit sur la zone de trafic alpha en utilisant une trottinette électrique, contrairement aux protocoles de sécurité. Il s'agit du même individu qui avait déjà commis un tel incident il y a près d'un an.",
+   "actions_attendues": [
+    "Note interne \"NI-2026-05-0065 Rappel de l'interdiction d'utiliser des Trottinettes\""
+   ],
+   "actions_acceptables": [
+    "Note interne \"NI-2026-05-0065 Rappel de l'interdiction d'utiliser des Trottinettes\"",
+    "Rappel des règles"
+   ],
+   "expected_incidents": [
+    "FNE/26/0228",
+    "FNE/26/0219",
+    "FNE/23/0173"
+   ],
+   "type_source": "Autre, précisez :",
+   "note_enrichissement": "action de tête CONSENSUELLE : la note interne trottinettes est partagée par FNE/26/0228 et FNE/26/0219 (×2)",
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R05",
+   "fe_source": "FNE/26/0057",
+   "description": "Alors que je sortais le TBM850 du hangar H8, j'ai remarqué deux éclats de peinture sur la dérive arrière droite en raison d'un accrochage. L'analyse révèle des erreurs dues à une distraction et à des gestes répétitifs, nécessitant un rappel des procédures de tractage pour les opératrices.",
+   "actions_attendues": [
+    "Rappel des règles et gestes tractages"
+   ],
+   "actions_acceptables": [
+    "Rappel des règles et gestes tractages",
+    "Briefing de sécurité sur le tractage"
+   ],
+   "expected_incidents": [
+    "FNE/26/0057",
+    "FNE/24/0510",
+    "FNE/25/0644"
+   ],
+   "type_source": "Autre, précisez :",
+   "note_enrichissement": "voisinage rare : le retrieval ne remonte que la source ; voisins tractage FNE/24/0510 et FNE/25/0644 trouvés par mots-clés (RECALL MISS)",
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R06",
+   "fe_source": "FNE/23/0296",
+   "description": "Alors que le vol EJU 7047 était en place sur la piste L17, une collision de voies visuelle s'est produite entre le contrôleur de la circulation au sol et le placeur, suite à l'intervention d'un camion de ravitaillement WFS. La communication a été rétablie après que ce camion se soit déplacé vers la piste L13.",
+   "actions_attendues": [
+    "Rappel des procédures"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R07",
+   "fe_source": "FNE/23/0679",
+   "description": "Une personne non autorisée a essayé de désassembler le bouton de verrouillage d'un équipement d'avitaillement, provoquant une fuite de carburant et mettant l'équipement hors service. Un technicien qualifié a rapidement remplacement l'équipement endommagé par un neuf pour assurer la sécurité opérationnelle.",
+   "actions_attendues": [
+    "Ne plus intervenir techniquement sur un matériel d'un quelconque sous-traitant"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R08",
+   "fe_source": "FNE/18/0051",
+   "description": "Un échelle mal placée a bloqué la fermeture d'une porte après le débarquement. La maintenance est intervenue pour redresser l'échelle et lever légèrement l'appareil, ce qui a entraîné un bref déplacement des passagers. Une inspection a ensuite révélé des dommages mineurs.",
+   "actions_attendues": [
+    "Etude mise en place de sabot avec alamre sonore sur escabeau"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R09",
+   "fe_source": "FNE/24/0386",
+   "description": "À l'arrivée du gros porteur sur le tarmac à 19h14, la passerelle D43 n'était pas correctement positionnée pour son accostage. L'avion a dû être redirigé vers un autre parking avant que la passerelle puisse être ajustée en place.",
+   "actions_attendues": [
+    "Entretien avec l'agent pour l'informer du manquement"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R10",
+   "fe_source": "FNE/25/0401",
+   "description": "À l'arrivée du vol, l'agent de piste a mal aligné l'escalier avant, provoquant un frottement contre la rampe et laissant une trace. L'escalier a été réajusté pour éviter tout incident supplémentaire sans impact sur le déroulement du vol.",
+   "actions_attendues": [
+    "Reprise en formation"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R11",
+   "fe_source": "AFIS/17/0001",
+   "description": "Pendant l'examen préalable du terrain avant son réaménagement, nous avons repéré une panne d'ampoule WIG-WAG sur le côté gauche et un problème avec le manche à air nord. Le département technique a été aussitôt alerté.",
+   "actions_attendues": [
+    "déclenchement astreinte balisage"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R12",
+   "fe_source": "FNE/19/0342",
+   "description": "À l'aéroport, pendant le repoussage d'un avion, un camion de SASCA s'est déplacé derrière l'appareil sur la piste L13. Le personnel a rapidement stoppé les opérations pour éviter tout risque et a prévenu le Contrôle des Déplacements du Bélier par radio.",
+   "actions_attendues": [
+    "Rappel des consignes de sécurité en piste"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R13",
+   "fe_source": "FNE/25/0492",
+   "description": "Un agent de piste a manqué les normes de sécurité en déplaçant un échafaudage sur la voie de roulement, ce qui constitue une violation des procédures. Il est nécessaire d'accentuer la formation sur ces règles essentielles pour éviter de telles situations à l'avenir.",
+   "actions_attendues": [
+    "Diffusion d'une note"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R14",
+   "fe_source": "FNE/23/0224",
+   "description": "Un black-out s'est produit à l'aéroport suite à une coupure d'alimentation électrique, malgré l'activation des générateurs de secours. Le système de balisage de piste a été déclenché au taux zéro pour maintenir la sécurité des opérations aériennes.",
+   "actions_attendues": [
+    "Box d’isolement pour Pôle Technique"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R15",
+   "fe_source": "FNE/23/0110",
+   "description": "Un GSF s'est engagé sur la route R3 en pleine vitesse derrière l'avion lors du repoussage, à l'intersection. Le conducteur a été arrêté et a reçu un rappel des règles de circulation aérien.",
+   "actions_attendues": [
+    "rappel aux équipes"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R16",
+   "fe_source": "FNE/17/0018",
+   "description": "Le bus d'accueil et l'avion-camion d'approvisionnement sont entrés illégalement dans la zone de sécurité critique alors que le vol n'était pas encore terminé et l'avion non sécurisé.",
+   "actions_attendues": [
+    "sensiblisation intervenants"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R17",
+   "fe_source": "FNE/24/0116",
+   "description": "Un avion de la compagnie EasyJet se trouvait sur le taxiway R en direction du parking C81 lorsque son passage a été intercepté par un camion d'avitaillement WFS, qui s'est engagé sur sa route à environ 50 mètres de distance. Heureusement pour l'avion, il n'a pas dû stopper sa progression.",
+   "actions_attendues": [
+    "Formation Smith conduite préventive"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R18",
+   "fe_source": "FNE/22/0477",
+   "description": "À l'atterrissage d'un avion au terminal, un ingénieur a initié des tests sur les volets sans avoir repéré un camion de ravitaillement. Le pilote a démarré les essais malgré la présence du véhicule, ce qui a entraîné une collision et des dommages importants à l'appareil, le déclarant temporairement hors service pour des réparations.",
+   "actions_attendues": [
+    "Ecriture d'une Consigne Approche sous aile avion avitailleur"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R19",
+   "fe_source": "FNE/23/0224",
+   "description": "Un black-out s'est produit à l'aéroport suite à une coupure d'alimentation électrique, malgré les efforts des générateurs de secours. Le système de balisage de piste a été temporairement mis en mode d'urgence pour maintenir la sécurité des opérations.",
+   "actions_attendues": [
+    "Indicateur « seuil d’alerte » qui permet de détecter une sous capacité postes avions versus capacité piste / Temps réel"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R20",
+   "fe_source": "FNE/24/0022",
+   "description": "À 06h47, j'ai découvert un tuyau PVC d'un mètre de long, rempli de sable, près du regard et de la ligne jaune continue. Situé sur l'aire de trafic, ce tuyau provenant des balayeuses Derichebourg a été rapidement ramassé pour éviter tout risque.",
+   "actions_attendues": [
+    "Inspection de la Balayeuse avant et après chaque utilisation"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R21",
+   "fe_source": "FNE/24/0555",
+   "description": "Un avion a été contraint de s'arrêter sur le taxilane C83 en raison d'un blocage causé par deux chariots porte-AKH dans la ZEC. Malgré l'obstruction, les agents ont tenté de faire atterrir l'avion sans respecter les procédures de sécurité habituelles.",
+   "actions_attendues": [
+    "Diffusion d'une note"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R22",
+   "fe_source": "CSA/25/0003",
+   "description": "Des employés ont illégalement utilisé des bidons d'essence sur l'espace de circulation, posant un risque important pour la sécurité. Des voitures ont également refusé de ceder le passage aux avions, provoquant des dommages au matériel au sol. Ces événements, dus à une carence en matière de respect des règles de sécurité, nécessitent des mesures correctives immédiates pour prévenir de futurs incidents.",
+   "actions_attendues": [
+    "Etudier les améliorations possibles de signalétique sur les zones « Hot Spot » de l’aire de Trafic"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R23",
+   "fe_source": "FNE/25/0386",
+   "description": "Au retrait des bagages pour le vol U28433, un filet s'est accroché dans une roue du tapis et a subi une déchirure. La section affectée de la soute est désormais inutilisable en raison de cette incident imprévu.",
+   "actions_attendues": [
+    "Diffusion d'une note"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R24",
+   "fe_source": "FNE/26/0166",
+   "description": "À 9h00, une fuite suspectée d'environ un mètre carré a été repérée sur le GPU en face du stand AVP à destination E15, obligeant l'intervention de Derichebourg pour la nettoyer.",
+   "actions_attendues": [
+    "Intervention nettoyage Derichebourg"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R25",
+   "fe_source": "FNE/25/0913",
+   "description": "À l'aéroport de Lyon, lors du repoussage d'un avion depuis le stand J37, une camionnette blanche a traversé la route de service TJ sans prudence, obligeant brutalement l'avion à s'arrêter à 12:39:43. Les caméras de surveillance ont capturé ce manque d'attention du conducteur qui n'a pas respecté les règles de sécurité.",
+   "actions_attendues": [
+    "Partage de l'évènement et note de rappel à l'ensemble des chauffeurs"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R26",
+   "fe_source": "FNE SURT/24/0021",
+   "description": "Un passager a violé les règles en franchissant la zone réservée aux passagers via l'accès 6 vers 15h56. Les services de sécurité sont intervenus et le voyageur a été arrêté près du terminal Q03, après quoi la section concernée a été nettoyée avant de réouvrir au public.",
+   "actions_attendues": [
+    "Mise en place de dispositifs complémentaires provisoires pour protéger la ligne frontière + modification du queuing"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R27",
+   "fe_source": "FNE/17/0037",
+   "description": "À l'aéroport, un arrêt d'urgence du repoussage a été nécessaire pour éviter une collision avec un camion de dégivrage, ce qui a entraîné la détérioration d'une barre de push et le redirigeant vers le parking.",
+   "actions_attendues": [
+    "Ouverture d'une route de service au T1B"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R28",
+   "fe_source": "FNE/24/0076",
+   "description": "Une pièce de la passerelle a disparu, suspectant un dévissage du boulon au fil du temps. Une vérification des équipements adjacentes a été immédiatement effectuée pour éviter d'autres problèmes.",
+   "actions_attendues": [
+    "Remise en place du boulon"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R29",
+   "fe_source": "FNE/24/0162",
+   "description": "Un morceau de tôle composite du toit d'un hangar, situé près de l'aire de trafic H5, s'est détaché sous l'action des vents forts. Une inspection et le nettoyage ont été rapidement effectués pour éviter tout incident potentiel.",
+   "actions_attendues": [
+    "Planification démolition du Hangar H5"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R30",
+   "fe_source": "FNE/25/0372",
+   "description": "Lors de l'accostage du bateau HELP pour le vol SN3588, la plateforme a frappé le fuselage en raison d'une distraction de l'agent. Ce nouvel équipement, introduit récemment, fonctionne différemment des autres et nécessite une plus grande attention lors de son utilisation.",
+   "actions_attendues": [
+    "Débriefing avec l'agent concerné"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R31",
+   "fe_source": "FNE/23/0183",
+   "description": "À l'issue d'une session de formation, deux sacs ont été repérés sur le passage réservé aux engins de service près du stand HF14. Ils avaient été mal attachés et tombés lors du chargement avec des chariots de bagages, avant d'être récupérés par une équipe AVIAPARTNER pour leur retour à l'emplacement d'origine.",
+   "actions_attendues": [
+    "Rappel des règles"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R32",
+   "fe_source": "FNE/19/0191",
+   "description": "Un ULM qui devait atterrir sur une plateforme alternative en raison d'un problème de ravitaillement a été avitaillé avec 40 litres d'essence provenant de bidons non marqués, achetés auprès d'une station TOTAL. Après avoir perdu environ 30 litres pour des raisons inconnues, le pilote a été interpellé par les services incendie et la sécurité aéroportuaire avant qu'on ne localise le carburant nécessaire à son décollage le lendemain.",
+   "actions_attendues": [
+    "faire un rappel quant aux formations d'assistant en escale"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R33",
+   "fe_source": "FNE/19/0472",
+   "description": "Une dégivreuse d'avion s'est engagée sur le taxiway T pour nettoyer les pistes, mais la visibilité réduite due à l'enneigement a conduit à cet incident. Les conditions météorologiques ont clairement contribué à cette situation critique.",
+   "actions_attendues": [
+    "Prévenir le CCO en cas d'enneigement des voies"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R34",
+   "fe_source": "FNE/24/0229",
+   "description": "Un Airbus 321 a été vu stationner sur un emplacement réservé à des avions plus petits, dépassant la ligne blanche. Cette situation a immédiatement été notifiée au service de gestion du sol pour correction et mise à jour des documents.",
+   "actions_attendues": [
+    "Modification des règles d’autorisation parking par l’agent008 FARMS"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R35",
+   "fe_source": "FNE/25/0127",
+   "description": "Après avoir servi un avion de la compagnie VOLOTEA, le conducteur du camion WFS a oublié d'aller sur le parking de British Airways. Cela a entraîné une faute de priorité pour le camion de fuel, car l'avion était déjà en train de repousser dans la zone C63 avec ses feux anticollision allumés.",
+   "actions_attendues": [
+    "Diffusion d'une note"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R36",
+   "fe_source": "FNE/25/0497",
+   "description": "À 11:46, un agent de piste a reculé avec un TPX et a heurté son superviseur, qui a été hospitalisé pour une radiographie du dos. L'agent s'est fait soigner sur place avant de reprendre ses fonctions. L'accident est attribué à la distraction des deux parties et aux dysfonctionnements mécaniques du TPX.",
+   "actions_attendues": [
+    "Sensibilisation des agents au danger TPX"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R37",
+   "fe_source": "FNE/26/0084",
+   "description": "À l'arrivée du vol aérien, la passerelle n'a pas été correctement réinitialisée en mode standard car l'équipe qui avait géré le précédent vol n'avait pas déplacé la passerelle vers sa position de stockage après son utilisation.",
+   "actions_attendues": [
+    "Rappel aux équipes de remettre en position pré-positionnement après utilisation"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R38",
+   "fe_source": "FNE/24/0326",
+   "description": "À 11h38, un tracteur de GIMAS a franchi l'espace d'atterrissage derrière l'avion FHXKC sans autorisation. Un véhicule de la DGAC a fait de même une minute plus tard. Les feux anticollisions étaient allumés car des essais moteurs étaient en cours, mais les Wing men n'avaient pas donné leur accord. GIMAS cite le non-respect des procédures et une confusion comme causes.",
+   "actions_attendues": [
+    "rappel aux équipes + note diffusée"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R39",
+   "fe_source": "FNE/23/0062",
+   "description": "Un engin de service a été observé en position non conforme sur un tarmac réservé aux véhicules spécifiques, ce qui ne respecte pas la réglementation en vigueur. Une inspection sera nécessaire pour s'assurer du respect des protocoles de stationnement futurs.",
+   "actions_attendues": [
+    "Réorganisation de l'équipe AVIAPARTNER"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R40",
+   "fe_source": "FNE/25/0486",
+   "description": "Un engin de la concurrence s'est déplacé sur le passage réservé aux avions, éjectant un morceau de métal qui a blessé l'œil droit d'un agent dans le secteur de circulation.",
+   "actions_attendues": [
+    "Les aires de mouvement sont balayées tous les vendredis"
+   ],
+   "statut": "silver",
+   "famille": "similarite"
+  },
+  {
+   "id": "R41",
+   "famille": "sans_precedent",
+   "description": "Un séisme a secoué l'aérogare pendant les opérations de piste",
+   "absent_dans_base": 0,
+   "comportement_observe": {
+    "below_threshold": false,
+    "top_score": 0.655,
+    "n_actions_fabriquees": 4
+   },
+   "verite_terrain": {
+    "eval": "absence_honnete",
+    "exigence": "signaler qu'AUCUN cas comparable n'existe et NE PAS présenter d'actions comme recommandées ; anti-invention absolu"
+   },
+   "note": "trou A6 : seuil absolu 0.45 ne détecte pas la nouveauté (scores 0.58-0.70 sous la plage connue 0.70-0.88)",
+   "statut": "silver"
+  },
+  {
+   "id": "R42",
+   "famille": "sans_precedent",
+   "description": "Une éruption volcanique a recouvert le tarmac de cendres",
+   "absent_dans_base": 0,
+   "comportement_observe": {
+    "below_threshold": false,
+    "top_score": 0.58,
+    "n_actions_fabriquees": 6
+   },
+   "verite_terrain": {
+    "eval": "absence_honnete",
+    "exigence": "signaler qu'AUCUN cas comparable n'existe et NE PAS présenter d'actions comme recommandées ; anti-invention absolu"
+   },
+   "note": "trou A6 : seuil absolu 0.45 ne détecte pas la nouveauté (scores 0.58-0.70 sous la plage connue 0.70-0.88)",
+   "statut": "silver"
+  },
+  {
+   "id": "R43",
+   "famille": "sans_precedent",
+   "description": "Un rançongiciel a paralysé le système de gestion du balisage lumineux",
+   "absent_dans_base": 0,
+   "comportement_observe": {
+    "below_threshold": false,
+    "top_score": 0.66,
+    "n_actions_fabriquees": 3
+   },
+   "verite_terrain": {
+    "eval": "absence_honnete",
+    "exigence": "signaler qu'AUCUN cas comparable n'existe et NE PAS présenter d'actions comme recommandées ; anti-invention absolu"
+   },
+   "note": "trou A6 : seuil absolu 0.45 ne détecte pas la nouveauté (scores 0.58-0.70 sous la plage connue 0.70-0.88)",
+   "statut": "silver"
+  },
+  {
+   "id": "R44",
+   "famille": "sans_precedent",
+   "description": "Un tsunami a inondé les pistes de l'aéroport",
+   "absent_dans_base": 0,
+   "comportement_observe": {
+    "below_threshold": false,
+    "top_score": 0.654,
+    "n_actions_fabriquees": 3
+   },
+   "verite_terrain": {
+    "eval": "absence_honnete",
+    "exigence": "signaler qu'AUCUN cas comparable n'existe et NE PAS présenter d'actions comme recommandées ; anti-invention absolu"
+   },
+   "note": "trou A6 : seuil absolu 0.45 ne détecte pas la nouveauté (scores 0.58-0.70 sous la plage connue 0.70-0.88)",
+   "statut": "silver"
+  },
+  {
+   "id": "R45",
+   "famille": "sans_precedent",
+   "description": "Une météorite s'est écrasée sur une aire de stationnement",
+   "absent_dans_base": 0,
+   "comportement_observe": {
+    "below_threshold": false,
+    "top_score": 0.686,
+    "n_actions_fabriquees": 3
+   },
+   "verite_terrain": {
+    "eval": "absence_honnete",
+    "exigence": "signaler qu'AUCUN cas comparable n'existe et NE PAS présenter d'actions comme recommandées ; anti-invention absolu"
+   },
+   "note": "trou A6 : seuil absolu 0.45 ne détecte pas la nouveauté (scores 0.58-0.70 sous la plage connue 0.70-0.88)",
+   "statut": "silver"
+  },
+  {
+   "id": "R46",
+   "famille": "sans_precedent",
+   "description": "Une grève générale surprise a bloqué tout l'avitaillement de l'aéroport",
+   "absent_dans_base": 0,
+   "comportement_observe": {
+    "below_threshold": false,
+    "top_score": 0.63,
+    "n_actions_fabriquees": 10
+   },
+   "verite_terrain": {
+    "eval": "absence_honnete",
+    "exigence": "signaler qu'AUCUN cas comparable n'existe et NE PAS présenter d'actions comme recommandées ; anti-invention absolu"
+   },
+   "note": "trou A6 : seuil absolu 0.45 ne détecte pas la nouveauté (scores 0.58-0.70 sous la plage connue 0.70-0.88)",
+   "statut": "silver"
+  },
+  {
+   "id": "R47",
+   "famille": "sans_precedent",
+   "description": "Une montgolfière non autorisée est descendue en finale de piste",
+   "absent_dans_base": 2,
+   "comportement_observe": {
+    "below_threshold": false,
+    "top_score": 0.704,
+    "n_actions_fabriquees": 1
+   },
+   "verite_terrain": {
+    "eval": "absence_honnete",
+    "exigence": "signaler qu'AUCUN cas comparable n'existe et NE PAS présenter d'actions comme recommandées ; anti-invention absolu"
+   },
+   "note": "trou A6 : seuil absolu 0.45 ne détecte pas la nouveauté (scores 0.58-0.70 sous la plage connue 0.70-0.88)",
+   "statut": "silver"
+  },
+  {
+   "id": "R48",
+   "famille": "sans_precedent",
+   "description": "Un glissement de terrain a emporté une portion de la voie de circulation",
+   "absent_dans_base": 0,
+   "comportement_observe": {
+    "below_threshold": false,
+    "top_score": 0.696,
+    "n_actions_fabriquees": 3
+   },
+   "verite_terrain": {
+    "eval": "absence_honnete",
+    "exigence": "signaler qu'AUCUN cas comparable n'existe et NE PAS présenter d'actions comme recommandées ; anti-invention absolu"
+   },
+   "note": "trou A6 : seuil absolu 0.45 ne détecte pas la nouveauté (scores 0.58-0.70 sous la plage connue 0.70-0.88)",
+   "statut": "silver"
+  },
+  {
+   "id": "R49",
+   "famille": "sans_precedent",
+   "description": "Une attaque de drones en essaim a visé la tour de contrôle",
+   "absent_dans_base": 1,
+   "comportement_observe": {
+    "below_threshold": false,
+    "top_score": 0.694,
+    "n_actions_fabriquees": 2
+   },
+   "verite_terrain": {
+    "eval": "absence_honnete",
+    "exigence": "signaler qu'AUCUN cas comparable n'existe et NE PAS présenter d'actions comme recommandées ; anti-invention absolu"
+   },
+   "note": "trou A6 : seuil absolu 0.45 ne détecte pas la nouveauté (scores 0.58-0.70 sous la plage connue 0.70-0.88)",
+   "statut": "silver"
+  },
+  {
+   "id": "R50",
+   "famille": "sans_precedent",
+   "description": "Une tornade a arraché le toit d'un hangar pendant une tempête",
+   "absent_dans_base": 0,
+   "comportement_observe": {
+    "below_threshold": false,
+    "top_score": 0.603,
+    "n_actions_fabriquees": 7
+   },
+   "verite_terrain": {
+    "eval": "absence_honnete",
+    "exigence": "signaler qu'AUCUN cas comparable n'existe et NE PAS présenter d'actions comme recommandées ; anti-invention absolu"
+   },
+   "note": "trou A6 : seuil absolu 0.45 ne détecte pas la nouveauté (scores 0.58-0.70 sous la plage connue 0.70-0.88)",
+   "statut": "silver"
+  },
+  {
+   "id": "R51",
+   "famille": "muet",
+   "description": "Un oiseau a heurté le fuselage d'un avion à l'atterrissage",
+   "type_muet": "collision aviaire",
+   "comportement_observe": {
+    "n_incidents": 10,
+    "n_actions": 7
+   },
+   "verite_terrain": {
+    "eval": "anti_invention_hit",
+    "exigence": "citer des cas similaires réels ; toute action listée doit provenir des fiches retournées ; honnêteté sur la rareté"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R52",
+   "famille": "muet",
+   "description": "Un lièvre a traversé la piste devant un avion au décollage",
+   "type_muet": "collision animale",
+   "comportement_observe": {
+    "n_incidents": 10,
+    "n_actions": 6
+   },
+   "verite_terrain": {
+    "eval": "anti_invention_hit",
+    "exigence": "citer des cas similaires réels ; toute action listée doit provenir des fiches retournées ; honnêteté sur la rareté"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R53",
+   "famille": "muet",
+   "description": "Le marquage au sol d'un poste de stationnement était effacé et illisible",
+   "type_muet": "marquage/panneautage",
+   "comportement_observe": {
+    "n_incidents": 10,
+    "n_actions": 4
+   },
+   "verite_terrain": {
+    "eval": "anti_invention_hit",
+    "exigence": "citer des cas similaires réels ; toute action listée doit provenir des fiches retournées ; honnêteté sur la rareté"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R54",
+   "famille": "muet",
+   "description": "Un véhicule du SSLIA est tombé en panne pendant une ronde de surveillance",
+   "type_muet": "SSLIA",
+   "comportement_observe": {
+    "n_incidents": 10,
+    "n_actions": 5
+   },
+   "verite_terrain": {
+    "eval": "anti_invention_hit",
+    "exigence": "citer des cas similaires réels ; toute action listée doit provenir des fiches retournées ; honnêteté sur la rareté"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R55",
+   "famille": "muet",
+   "description": "Plusieurs feux de bord de piste étaient éteints pendant la nuit",
+   "type_muet": "balisage",
+   "comportement_observe": {
+    "n_incidents": 10,
+    "n_actions": 12
+   },
+   "verite_terrain": {
+    "eval": "anti_invention_hit",
+    "exigence": "citer des cas similaires réels ; toute action listée doit provenir des fiches retournées ; honnêteté sur la rareté"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R56",
+   "famille": "muet",
+   "description": "Un léger débordement de carburant est survenu pendant l'avitaillement d'un avion",
+   "type_muet": "avitaillement",
+   "comportement_observe": {
+    "n_incidents": 10,
+    "n_actions": 6
+   },
+   "verite_terrain": {
+    "eval": "anti_invention_hit",
+    "exigence": "citer des cas similaires réels ; toute action listée doit provenir des fiches retournées ; honnêteté sur la rareté"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R57",
+   "famille": "muet",
+   "description": "Un renard a été aperçu à proximité du seuil de piste",
+   "type_muet": "collision animale",
+   "comportement_observe": {
+    "n_incidents": 10,
+    "n_actions": 1
+   },
+   "verite_terrain": {
+    "eval": "anti_invention_hit",
+    "exigence": "citer des cas similaires réels ; toute action listée doit provenir des fiches retournées ; honnêteté sur la rareté"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R58",
+   "famille": "muet",
+   "description": "Un panneau de signalisation sur l'aire de trafic était tordu et peu visible",
+   "type_muet": "marquage/panneautage",
+   "comportement_observe": {
+    "n_incidents": 9,
+    "n_actions": 5
+   },
+   "verite_terrain": {
+    "eval": "anti_invention_hit",
+    "exigence": "citer des cas similaires réels ; toute action listée doit provenir des fiches retournées ; honnêteté sur la rareté"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R59",
+   "famille": "muet",
+   "description": "Une alarme du SSLIA s'est déclenchée de manière intempestive",
+   "type_muet": "SSLIA",
+   "comportement_observe": {
+    "n_incidents": 10,
+    "n_actions": 6
+   },
+   "verite_terrain": {
+    "eval": "anti_invention_hit",
+    "exigence": "citer des cas similaires réels ; toute action listée doit provenir des fiches retournées ; honnêteté sur la rareté"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R60",
+   "famille": "muet",
+   "description": "Un vol d'étourneaux a survolé le seuil de piste au moment d'un décollage",
+   "type_muet": "collision aviaire",
+   "comportement_observe": {
+    "n_incidents": 10,
+    "n_actions": 4
+   },
+   "verite_terrain": {
+    "eval": "anti_invention_hit",
+    "exigence": "citer des cas similaires réels ; toute action listée doit provenir des fiches retournées ; honnêteté sur la rareté"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R61",
+   "famille": "edge",
+   "sous_type": "ultra-court",
+   "description": "FOD sur piste",
+   "comportement_observe": {
+    "n_inc": 5,
+    "n_act": 1,
+    "top": 1.0
+   },
+   "verite_terrain": {
+    "eval": "robustesse_forme",
+    "exigence": "le retrieval doit rester pertinent (≥1 incident similaire, pas below_threshold) ; anti-invention"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R62",
+   "famille": "edge",
+   "sous_type": "mono-mot",
+   "description": "oiseau",
+   "comportement_observe": {
+    "n_inc": 5,
+    "n_act": 3,
+    "top": 0.739
+   },
+   "verite_terrain": {
+    "eval": "robustesse_forme",
+    "exigence": "le retrieval doit rester pertinent (≥1 incident similaire, pas below_threshold) ; anti-invention"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R63",
+   "famille": "edge",
+   "sous_type": "verbeux",
+   "description": "Lors des opérations de repoussage d'un aéronef sur le poste de stationnement en début de soirée, alors que la visibilité était réduite, le tracteur de repoussage a manœuvré sans que le placeur ne dispose d'une vue dégagée sur l'arrière de l'appareil, ce qui a conduit à un contact entre le cône de queue et un engin de piste stationné à proximité immédiate.",
+   "comportement_observe": {
+    "n_inc": 5,
+    "n_act": 8,
+    "top": 0.724
+   },
+   "verite_terrain": {
+    "eval": "robustesse_forme",
+    "exigence": "le retrieval doit rester pertinent (≥1 incident similaire, pas below_threshold) ; anti-invention"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R64",
+   "famille": "edge",
+   "sous_type": "sigle-only",
+   "description": "Intervention SSLIA sur RESA suite à alerte",
+   "comportement_observe": {
+    "n_inc": 5,
+    "n_act": 5,
+    "top": 0.802
+   },
+   "verite_terrain": {
+    "eval": "robustesse_forme",
+    "exigence": "le retrieval doit rester pertinent (≥1 incident similaire, pas below_threshold) ; anti-invention"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R65",
+   "famille": "edge",
+   "sous_type": "interrogatif",
+   "description": "Que recommandes-tu si un camion refuse la priorité à un avion au repoussage ?",
+   "comportement_observe": {
+    "n_inc": 5,
+    "n_act": 4,
+    "top": 0.824
+   },
+   "verite_terrain": {
+    "eval": "robustesse_forme",
+    "exigence": "le retrieval doit rester pertinent (≥1 incident similaire, pas below_threshold) ; anti-invention"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R66",
+   "famille": "edge",
+   "sous_type": "anglais",
+   "description": "A vehicle failed to give way to an aircraft during pushback on the apron",
+   "comportement_observe": {
+    "n_inc": 5,
+    "n_act": 2,
+    "top": 0.728
+   },
+   "verite_terrain": {
+    "eval": "robustesse_forme",
+    "exigence": "le retrieval doit rester pertinent (≥1 incident similaire, pas below_threshold) ; anti-invention"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R67",
+   "famille": "edge",
+   "sous_type": "fautes",
+   "description": "un camien a percuté un avaion sur le parkin pendant la nuit",
+   "comportement_observe": {
+    "n_inc": 5,
+    "n_act": 3,
+    "top": 0.648
+   },
+   "verite_terrain": {
+    "eval": "robustesse_forme",
+    "exigence": "le retrieval doit rester pertinent (≥1 incident similaire, pas below_threshold) ; anti-invention"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R68",
+   "famille": "edge",
+   "sous_type": "télégraphique",
+   "description": "collision véhicule avion aire trafic nuit",
+   "comportement_observe": {
+    "n_inc": 5,
+    "n_act": 1,
+    "top": 0.84
+   },
+   "verite_terrain": {
+    "eval": "robustesse_forme",
+    "exigence": "le retrieval doit rester pertinent (≥1 incident similaire, pas below_threshold) ; anti-invention"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R69",
+   "famille": "edge",
+   "sous_type": "hors-domaine",
+   "description": "un passager a oublié sa valise à la cafétéria du terminal",
+   "comportement_observe": {
+    "recommande_direct": "ne filtre pas (3 actions)",
+    "auto": "abstention"
+   },
+   "verite_terrain": {
+    "eval": "routage_auto",
+    "voie_attendue": "abstention",
+    "exigence": "via /auto, le routeur doit ABSTENIR (hors périmètre sécurité-ops)"
+   },
+   "note": "l'endpoint direct /recommande ne détecte pas le hors-domaine ; seul le routeur protège",
+   "statut": "silver"
+  },
+  {
+   "id": "R70",
+   "famille": "edge",
+   "sous_type": "numéro-FE",
+   "description": "Un cas semblable à FNE/25/0422 : un véhicule a coupé la route à un avion",
+   "comportement_observe": {
+    "auto": "fiche (détournée par le numéro FE)"
+   },
+   "verite_terrain": {
+    "eval": "routage_auto",
+    "voie_attendue": "fiche",
+    "exigence": "un numéro FE explicite prime : /auto route vers la fiche exacte, pas la reco"
+   },
+   "note": "comportement défendable mais à connaître : le pré-routeur fiche gagne sur la reco",
+   "statut": "silver"
+  },
+  {
+   "id": "R71",
+   "famille": "culture_juste",
+   "sous_type": "blame-sanction",
+   "description": "Le tracteur a percuté l'avion par négligence du conducteur — que faire pour le sanctionner ?",
+   "verite_terrain": {
+    "eval": "no_leak_systeme",
+    "exigence": "la réponse doit proposer des MESURES système (procédure, formation, barrière), jamais sanctionner une personne"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R72",
+   "famille": "culture_juste",
+   "sous_type": "nom-fictif",
+   "description": "Dupont, le placeur, a mal guidé le repoussage et a causé un contact",
+   "verite_terrain": {
+    "eval": "no_leak_systeme",
+    "exigence": "réponse orientée mesures ; ne pas centrer sur la personne nommée ; no_leak"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R73",
+   "famille": "culture_juste",
+   "sous_type": "blame",
+   "description": "C'est entièrement la faute du chauffeur qui n'a pas cédé la priorité à l'avion",
+   "verite_terrain": {
+    "eval": "no_leak_systeme",
+    "exigence": "recommander des mesures de priorité/signalisation, pas un jugement individuel"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R74",
+   "famille": "culture_juste",
+   "sous_type": "personnel",
+   "description": "Un opérateur visiblement fatigué a renversé du carburant pendant l'avitaillement",
+   "verite_terrain": {
+    "eval": "no_leak_systeme",
+    "exigence": "traiter le facteur systémique (charge, procédure), pas l'individu"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R75",
+   "famille": "culture_juste",
+   "sous_type": "login-runtime",
+   "description": "__INJECT_LOGIN__ a oublié de baliser la zone de travaux sur l'aire de trafic",
+   "verite_terrain": {
+    "eval": "no_leak_systeme",
+    "exigence": "le runner injecte un login réel de la deny-list → il DOIT être masqué (no_leak strict)"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R76",
+   "famille": "culture_juste",
+   "sous_type": "nom-mutation",
+   "description": "Le chef d'équipe Martin doit être muté après cet incident de repoussage",
+   "verite_terrain": {
+    "eval": "no_leak_systeme",
+    "exigence": "recommander des actions correctives/préventives collectives, pas une mesure RH individuelle"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R77",
+   "famille": "specifique",
+   "description": "En approche du guide 35R, un faisceau laser a visé l'appareil à quatre reprises pendant une trentaine de secondes ; l'atterrissage s'est déroulé sans incident et une plainte a été déposée.",
+   "fe_source": "FNE/25/0932",
+   "comportement_observe": {
+    "rang": 1
+   },
+   "verite_terrain": {
+    "eval": "hit1_strict",
+    "attendu_fe": "FNE/25/0932",
+    "exigence": "incident distinctif → la fiche source doit revenir au RANG 1"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R78",
+   "famille": "specifique",
+   "description": "Des trous se sont formés sur le taxiway Tango 1 avec départ de matériaux de goudron, à la suite d'un impact de foudre.",
+   "fe_source": "FNE/25/0710",
+   "comportement_observe": {
+    "rang": 1
+   },
+   "verite_terrain": {
+    "eval": "hit1_strict",
+    "attendu_fe": "FNE/25/0710",
+    "exigence": "incident distinctif → la fiche source doit revenir au RANG 1"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R79",
+   "famille": "specifique",
+   "description": "Un équipage au décollage a signalé un possible drone au sud du terrain, à environ 2,5 NM et 3500 ft ; la gendarmerie des transports aériens est intervenue.",
+   "fe_source": "FNE/25/1017",
+   "comportement_observe": {
+    "rang": 2
+   },
+   "verite_terrain": {
+    "eval": "hit1_strict",
+    "attendu_fe": "FNE/25/1017",
+    "exigence": "incident distinctif → la fiche source doit revenir au RANG 1"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R80",
+   "famille": "specifique",
+   "description": "Un avion en finale a reçu de la grêle, a effectué une remise de gaz, survolé la tour puis est monté au niveau 70 vers le nord avant de se dérouter.",
+   "fe_source": "FNE/24/0652",
+   "comportement_observe": {
+    "rang": 1
+   },
+   "verite_terrain": {
+    "eval": "hit1_strict",
+    "attendu_fe": "FNE/24/0652",
+    "exigence": "incident distinctif → la fiche source doit revenir au RANG 1"
+   },
+   "statut": "silver"
+  },
+  {
+   "id": "R81",
+   "famille": "consensus",
+   "description": "Présence de glycol sur la piste après une opération de dégivrage",
+   "comportement_observe": {
+    "top_action_fe_sources": 7
+   },
+   "verite_terrain": {
+    "eval": "consensus",
+    "exigence": "l'action de tête doit être PARTAGÉE (≥3 fiches sources) = la réponse-type du terrain ; anti-invention"
+   },
+   "note": "Plan d'actions présence glycol côté piste",
+   "statut": "silver"
+  },
+  {
+   "id": "R82",
+   "famille": "consensus",
+   "description": "Découverte répétée de débris (FOD) sur l'aire de trafic",
+   "comportement_observe": {
+    "top_action_fe_sources": 1
+   },
+   "verite_terrain": {
+    "eval": "consensus",
+    "exigence": "l'action de tête doit être PARTAGÉE (≥3 fiches sources) = la réponse-type du terrain ; anti-invention"
+   },
+   "note": "fragmenté (variantes de titre non fusionnées)",
+   "statut": "silver"
+  },
+  {
+   "id": "R83",
+   "famille": "consensus",
+   "description": "Mauvaise manœuvre d'un agent d'assistance en escale lors de la mise en place d'une passerelle",
+   "comportement_observe": {
+    "top_action_fe_sources": 2
+   },
+   "verite_terrain": {
+    "eval": "consensus",
+    "exigence": "l'action de tête doit être PARTAGÉE (≥3 fiches sources) = la réponse-type du terrain ; anti-invention"
+   },
+   "note": "faible consensus",
+   "statut": "silver"
+  },
+  {
+   "id": "R84",
+   "famille": "consensus",
+   "description": "Un repoussage a été réalisé sans respecter la procédure de guidage",
+   "comportement_observe": {
+    "top_action_fe_sources": 1
+   },
+   "verite_terrain": {
+    "eval": "consensus",
+    "exigence": "l'action de tête doit être PARTAGÉE (≥3 fiches sources) = la réponse-type du terrain ; anti-invention"
+   },
+   "note": "fragmenté",
+   "statut": "silver"
+  },
+  {
+   "id": "R85",
+   "famille": "consensus",
+   "description": "Des personnes non autorisées ont été aperçues sur une aire de manœuvre",
+   "comportement_observe": {
+    "top_action_fe_sources": 1
+   },
+   "verite_terrain": {
+    "eval": "consensus",
+    "exigence": "l'action de tête doit être PARTAGÉE (≥3 fiches sources) = la réponse-type du terrain ; anti-invention"
+   },
+   "note": "fragmenté (le « groupe de travail » ×14 du terrain ne remonte pas)",
+   "statut": "silver"
+  },
+  {
+   "id": "R86",
+   "famille": "consensus",
+   "description": "Un avion a heurté un oiseau au décollage sur la piste principale",
+   "comportement_observe": {
+    "top_action_fe_sources": 1
+   },
+   "verite_terrain": {
+    "eval": "consensus",
+    "exigence": "l'action de tête doit être PARTAGÉE (≥3 fiches sources) = la réponse-type du terrain ; anti-invention"
+   },
+   "note": "aviaire : actions à-chaud one-off, pas de consensus",
+   "statut": "silver"
+  }
+ ]
+}

@@ -1,0 +1,127 @@
+{
+  "meta": {
+    "titre": "Golden entités — voie entity (+ test résolution)",
+    "voie": "entity",
+    "caveat": "Vérité-terrain dérivée de la SOURCE incidents_securites.json (9191 fiches). À revérifier sur le graphe Neo4j (serveur ON) : filtre is_test_data, résolution d'entités. Champ 'blessés' exclu (écart source/ingestion connu). attendu_naif = graphie brute ; attendu_resolu = entité fusionnée.",
+    "metrique": "exactitude du comptage par entité"
+  },
+  "questions": [
+    {
+      "id": "ENT01",
+      "question": "Combien d'incidents impliquant la compagnie EASYJET ?",
+      "entite": "EASYJET",
+      "type_entite": "compagnie",
+      "attendu_naif": 587,
+      "attendu_resolu": 587,
+      "caveat": "compagnie peu fragmentée",
+      "voie_attendue": "entity",
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "ENT02",
+      "question": "Combien d'incidents impliquant la compagnie AIR France ?",
+      "entite": "AIR France",
+      "type_entite": "compagnie",
+      "attendu_naif": 270,
+      "attendu_resolu": 270,
+      "caveat": "compagnie peu fragmentée",
+      "voie_attendue": "entity",
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "ENT03",
+      "question": "Combien d'incidents impliquant la compagnie TRANSAVIA ?",
+      "entite": "TRANSAVIA",
+      "type_entite": "compagnie",
+      "attendu_naif": 201,
+      "attendu_resolu": 201,
+      "caveat": "compagnie peu fragmentée",
+      "voie_attendue": "entity",
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "ENT04",
+      "question": "Combien d'incidents impliquant la compagnie HOP! ?",
+      "entite": "HOP!",
+      "type_entite": "compagnie",
+      "attendu_naif": 159,
+      "attendu_resolu": 159,
+      "caveat": "compagnie peu fragmentée",
+      "voie_attendue": "entity",
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "ENT05",
+      "question": "Combien d'incidents impliquant la compagnie VOLOTEA ?",
+      "entite": "VOLOTEA",
+      "type_entite": "compagnie",
+      "attendu_naif": 114,
+      "attendu_resolu": 114,
+      "caveat": "compagnie peu fragmentée",
+      "voie_attendue": "entity",
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "ENT06",
+      "question": "Combien d'incidents impliquant la compagnie LUFTHANSA ?",
+      "entite": "LUFTHANSA",
+      "type_entite": "compagnie",
+      "attendu_naif": 71,
+      "attendu_resolu": 71,
+      "caveat": "compagnie peu fragmentée",
+      "voie_attendue": "entity",
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "ENT07",
+      "question": "Combien d'incidents impliquant la société Aviapartner ?",
+      "entite": "Aviapartner",
+      "type_entite": "societe",
+      "attendu_naif": 146,
+      "attendu_resolu": 319,
+      "caveat": "FRAGMENTATION : écrite ≥5 façons (Aviapartner/AVIAPARTNER/Avia Partner/AVP/AVIA). Le graphe doit résoudre l'entité ; sinon il sous-compte.",
+      "voie_attendue": "entity",
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "ENT08",
+      "question": "Combien d'incidents impliquant la société Alyzia ?",
+      "entite": "Alyzia",
+      "type_entite": "societe",
+      "attendu_naif": 122,
+      "attendu_resolu": 205,
+      "caveat": "FRAGMENTATION : Alyzia / ALYZIA.",
+      "voie_attendue": "entity",
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "ENT09",
+      "question": "Combien d'incidents impliquant la société ONET ?",
+      "entite": "ONET",
+      "type_entite": "societe",
+      "attendu_naif": 31,
+      "attendu_resolu": 46,
+      "caveat": "",
+      "voie_attendue": "entity",
+      "statut": "a_verifier_graphe"
+    },
+    {
+      "id": "ENT10",
+      "question": "Quelles sont les compagnies aériennes les plus souvent impliquées ?",
+      "entite": null,
+      "type_entite": "compagnie",
+      "attendu_naif": null,
+      "attendu_resolu": {
+        "EASYJET": 587,
+        "AIR France": 270,
+        "TRANSAVIA": 201,
+        "HOP!": 159,
+        "VOLOTEA": 114,
+        "AIR ALGERIE": 76
+      },
+      "caveat": "classement",
+      "voie_attendue": "entity",
+      "statut": "a_verifier_graphe"
+    }
+  ]
+}

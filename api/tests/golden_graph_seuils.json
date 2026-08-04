@@ -1,0 +1,16 @@
+[
+  {"id": "GS1-deg-count", "question": "Combien d'incidents ont au moins deux actions associées",
+   "expect": {"pattern": "degree", "anchor": "incident", "via": "action", "op": ">=", "n": 2, "output": "count", "total": 236}},
+  {"id": "GS2-deg-count", "question": "Combien d'incidents ont au moins 3 actions structurées",
+   "expect": {"pattern": "degree", "anchor": "incident", "via": "action", "op": ">=", "n": 3, "output": "count", "total": 49}},
+  {"id": "GS3-recur", "question": "Combien d'actions reviennent sur plusieurs incidents",
+   "expect": {"pattern": "degree", "anchor": "action", "via": "incident", "op": ">=", "n": 2, "output": "count", "total": 71}},
+  {"id": "GS4-deg-list", "question": "Quels incidents ont plus de 3 actions",
+   "expect": {"pattern": "degree", "anchor": "incident", "via": "action", "op": ">", "n": 3, "output": "liste", "min_rows": 1}},
+  {"id": "GS5-shared", "question": "Incidents qui partagent une même action",
+   "expect": {"pattern": "shared", "anchor": "incident", "via": "action", "output": "liste", "total": 71, "min_rows": 1}},
+  {"id": "GS5b-shared-actions", "question": "les actions qui sont partagées par deux incidents",
+   "expect": {"pattern": "shared", "anchor": "incident", "via": "action", "output": "liste", "total": 71, "min_rows": 1}},
+  {"id": "GS6-precision", "question": "Quelles actions sont liées à au moins deux compagnies",
+   "expect": {"status": "besoin_precision"}}
+]
